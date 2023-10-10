@@ -5,6 +5,15 @@
 
 大学からのアクセスにはプロキシ設定が必要
 
+## proxyを有効にするコマンド
+git config --global http.proxy http://wwwproxy.kanazawa-it.ac.jp:8080 . && git config --global https.proxy https://wwwproxy.kanazawa-it.ac.jp:8080
+
+
+## proxyを無効にするコマンド
+git config --global --unset http.proxy . && git config --global --unset https.proxy
+
+<br>
+
 
 | group | number | クラス | 氏名 | シメイ | 研究室 |
 | ---- | ---- | ---- | ---- | ---- | ---- |
