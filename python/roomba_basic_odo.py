@@ -36,28 +36,88 @@ def print_function():
 def print_encs_value(ser, memory):
     Ser = ser
     Memory = memory
+    init = []
     while not exit_signal.is_set():
         start = time.time()
         EncL = GetSensor(Ser, RB_LEFT_ENC, 2, False)
         EncR = GetSensor(Ser, RB_RIGHT_ENC, 2, False)
-        time.sleep(0.01)
-        print(EncL, EncR)
+        # time.sleep(0.01)
+        # print(EncL, EncR)
+
+        check_L = EncL - Memory[0]
+        check_R = EncR - Memory[1]
+
+        # if abs(check_L) > 50000 or abs(check_R) > 50000:
+        #     Memory[0] = EncL
+        #     Memory[1] = EncR
+        #     continue
+
+        theta_L = (2.0 * math.pi) * (float(EncL) / 508.8)
+        theta_R = (2.0 * math.pi) * (float(EncR) / 508.8)
+        theta_L_mem = (2.0 * math.pi) * (float(Memory[0]) / 508.8)
+        theta_R_mem = (2.0 * math.pi) * (float(Memory[1]) / 508.8)
+
         end = time.time() - start
+
+        omega_L = (theta_L - theta_L_mem) / end
+        omega_R = (theta_R - theta_R_mem) / end
+        v_L = 0.036 * omega_L
+        v_R = 0.036 * omega_R
+        Vel = 0.5 * (v_L + v_R)
+        Omega = (1 / 0.235) * (v_R - v_L)
+        Theta = Omega * end + Memory[2]
+        x_t = Vel * math.cos(Theta) * end + Memory[3]
+        y_t = Vel * math.sin(Theta) * end + Memory[4]
+
+        if init == []:
+            init.append(x_t)
+            init.append(y_t)
+            init.append(Theta)            
+
+        Memory[0] = EncL
+        Memory[1] = EncR
+        Memory[2] = Theta
+        Memory[3] = x_t
+        Memory[4] = y_t
         
         SendData = struct.pack(
-            'fffff',
-            float( EncR ),
+            'ffffffff',
+            float( x_t ),
+            float( y_t ),
+            float( Theta ),
+            float( init[0] ),
+            float( init[1] ),
+            float( init[2] ),
             float( EncL ),
-            float( Memory[0] ),
-            float( Memory[1] ),
-            float( end )
+            float( EncR)
         )
         
         # Send data with UDP
         Sender.sendto(SendData, Destination)
 
-        Memory[0] = EncR
-        Memory[1] = EncL
+# Set UDP-Send
+# Argument 1,2 : Information of Sender (by oneself)
+# Argument 3,4 : Information of Destination
+def Set_UDP_Send(IP_src, Port_src, IP_dst, Port_dst):
+    Address_src = (IP_src, Port_src)
+    Address_dst = (IP_dst, Port_dst)
+
+    Socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    Socket.bind(Address_src)
+
+    # Return Socket object and Address of destination
+    return Socket, Address_dst
+
+# Set UDP-Receive
+# Argument 1,2 : Information of Receiver (by oneself)
+def Set_UDP_Receive(IP, Port):
+    Address = (IP, Port)
+
+    Socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    Socket.bind(Address)
+
+    # Return Socket object
+    return Socket
 
 '''モータ入力用バイト計算関数'''
 def _CalcHLByte(n):
@@ -103,32 +163,11 @@ def GetBumps(ser):
     
     return BumpC
 
-# Set UDP-Send
-# Argument 1,2 : Information of Sender (by oneself)
-# Argument 3,4 : Information of Destination
-def Set_UDP_Send(IP_src, Port_src, IP_dst, Port_dst):
-    Address_src = (IP_src, Port_src)
-    Address_dst = (IP_dst, Port_dst)
 
-    Socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    Socket.bind(Address_src)
-
-    # Return Socket object and Address of destination
-    return Socket, Address_dst
-
-# Set UDP-Receive
-# Argument 1,2 : Information of Receiver (by oneself)
-def Set_UDP_Receive(IP, Port):
-    Address = (IP, Port)
-
-    Socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    Socket.bind(Address)
-
-    # Return Socket object
-    return Socket
 
 def main():
     global ser, Sender, Destination, memory
+
     '''シリアル通信用変数'''
     RB_START = bytes([128])
     RB_RESET = bytes([7])
@@ -141,7 +180,9 @@ def main():
     print("--- Roomba Control via python ---")
     #print("Start Serial Communication")
     '''シリアル通信開始'''
-    ser = serial.Serial(RB_PORT, RB_RATE, timeout=10)
+    ser = serial.Serial(RB_PORT, RB_RATE, write_timeout=0)
+
+    stop_flag=1
 
     local = '127.0.0.1'
     send_port = 50000
@@ -155,11 +196,11 @@ def main():
 
     Reciever = Set_UDP_Receive(local, recv_port)
 
-    memory = [0, 0]
-
-    stop_flag=1
-    speed=50
+    memory = [0, 0, 0, 0, 0]
+    speed_L=70
+    speed_R=90
     speed_rot=50
+    mode = [1, speed_L, speed_R, 0]
 
     oimode1 = GetOIMode(ser)
     ser.write(RB_START)
@@ -169,42 +210,44 @@ def main():
     ser.write(RB_FULL)
     oimode2 = GetOIMode(ser)
     print("OIMode:"+str(oimode1)+"->"+str(oimode2))
+    memory[0] = GetSensor(ser, RB_LEFT_ENC, 2, False)
+    memory[1] = GetSensor(ser, RB_RIGHT_ENC, 2, False)
 
-    # time.sleep(1)
+    time.sleep(1)
 
     print_function()
     time.sleep(1)
-    DrivePWM(ser, speed,speed)
     
     try:
         while True:
-            RecvData = Reciever.recvfrom(4)
-            Data = struct.unpack('f', RecvData[0])
+            # RecvData = Reciever.recvfrom(12)
+            # Data = struct.unpack('fff', RecvData[0])
             # re_Data =int(Data)
-            mode = list( map(int, Data) )
-            # print(mode)
-            # print(type(mode[0]))
-
-            # val=input('Input command char: ')
+            # mode = list( map(int, Data) )
+            val=input('Input command char: ')
             #print("Input val="+val)
-            if mode[0] == 0:
-                print("STOP MOTOR")
-                # stop_flag = 1
+            # time.sleep(0.05)
+
+            if val == '0':
                 DrivePWM(ser, 0,0)
-                time.sleep(0.1)
-            elif mode[0] == 2:
-                # print("FWR(1)")
-                stop_flag = 0
-                DrivePWM(ser, speed,speed)
-                time.sleep(0.1)
+
+            elif val == '1':
+                DrivePWM(ser, mode[1], mode[2])
+
+            elif val == '2':
+                DrivePWM(ser, -mode[1], -mode[2])
+
             else:
-                # print("STOP MOTOR")
-                # stop_flag = 1
                 DrivePWM(ser, 0,0)
-                time.sleep(0.1)
-                # print("ROT-R(0)")
-                # stop_flag = 0
-                # DrivePWM(ser, speed_rot,-speed_rot)
+
+            # if stop_flag != 1:
+            #     print("STOP MOTOR")
+            #     stop_flag = 1
+            #     DrivePWM(ser, 0,0)
+            # elif val=='0':
+            #     print("ROT-R(0)")
+            #     stop_flag = 0
+            #     DrivePWM(ser, speed_rot,-speed_rot)
             # elif val=='2':
             #     print("ROT-L(2)")
             #     stop_flag = 0
@@ -212,11 +255,11 @@ def main():
             # elif val=='1':
             #     print("FWR(1)")
             #     stop_flag = 0
-            #     DrivePWM(ser, speed,speed)
+            #     DrivePWM(ser, speed_L,speed_R)
             # elif val=='3':
             #     print("BACK(3)")
             #     stop_flag = 0
-            #     DrivePWM(ser, -speed,-speed)
+            #     DrivePWM(ser, -speed_L,-speed_R)
             # elif val=='d':
             #     print("RESET")
             #     stop_flag = 1
@@ -249,20 +292,23 @@ def main():
             #     ser.write(RB_SEEK_DOCK)
             # elif val=='z':
             #     print("SENSOR")
-            #     # el,er = GetEncs(ser)
+            #     el,er = GetEncs(ser)
             #     oimode = GetOIMode(ser)
             #     vol = GetSensor(ser, RB_VOLTAGE, 2, False)
             #     cur = GetSensor(ser, RB_CURRENT, 2, False)
                 
-            #     # print("Enc L:"+str(el)+" R:"+str(er))
+            #     print("Enc L:"+str(el)+" R:"+str(er))
             #     print("OIMode:"+str(oimode))
             #     print("Votage/Current ="+str(vol)+"[mV]/"+str(cur)+"[mA]")
 
             # else:
             #     print("Input val="+val)
-
     except KeyboardInterrupt:
+        DrivePWM(ser, 0,0)
         exit_signal.set()
-            
-if __name__ == '__main__':
-    main()
+
+    finally:
+        DrivePWM(ser, 0,0)
+        exit_signal.set()
+
+main()

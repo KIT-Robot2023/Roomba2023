@@ -158,10 +158,12 @@ def main():
     memory = [0, 0]
 
     stop_flag=1
-    speed=50
+    speed=70
     speed_rot=50
 
     oimode1 = GetOIMode(ser)
+    ser.write(RB_RESET)
+    time.sleep(0.5)
     ser.write(RB_START)
     time.sleep(0.5)
     ser.write(RB_SAFE)
@@ -172,97 +174,138 @@ def main():
 
     # time.sleep(1)
 
-    print_function()
+    # print_function()
     time.sleep(1)
     DrivePWM(ser, speed,speed)
     
-    try:
-        while True:
-            RecvData = Reciever.recvfrom(4)
-            Data = struct.unpack('f', RecvData[0])
-            # re_Data =int(Data)
-            mode = list( map(int, Data) )
-            # print(mode)
-            # print(type(mode[0]))
+    # try:
+    while True:
+        RecvData = Reciever.recvfrom(4)
+        Data = struct.unpack('f', RecvData[0])
+        # re_Data =int(Data)
+        mode = list( map(int, Data) )
+        # print(mode)
+        start = time.time()
+        # print(type(mode[0]))
 
-            # val=input('Input command char: ')
-            #print("Input val="+val)
-            if mode[0] == 0:
-                print("STOP MOTOR")
-                # stop_flag = 1
-                DrivePWM(ser, 0,0)
-                time.sleep(0.1)
-            elif mode[0] == 2:
-                # print("FWR(1)")
-                stop_flag = 0
-                DrivePWM(ser, speed,speed)
-                time.sleep(0.1)
-            else:
-                # print("STOP MOTOR")
-                # stop_flag = 1
-                DrivePWM(ser, 0,0)
-                time.sleep(0.1)
-                # print("ROT-R(0)")
-                # stop_flag = 0
-                # DrivePWM(ser, speed_rot,-speed_rot)
-            # elif val=='2':
-            #     print("ROT-L(2)")
-            #     stop_flag = 0
-            #     DrivePWM(ser, -speed_rot,speed_rot)
-            # elif val=='1':
-            #     print("FWR(1)")
-            #     stop_flag = 0
-            #     DrivePWM(ser, speed,speed)
-            # elif val=='3':
-            #     print("BACK(3)")
-            #     stop_flag = 0
-            #     DrivePWM(ser, -speed,-speed)
-            # elif val=='d':
-            #     print("RESET")
-            #     stop_flag = 1
-            #     ser.write(RB_RESET)
-            #     str1 = ser.read(234)
-            #     print(str1)
-            # elif val=='a':
-            #     print("START")
-            #     stop_flag = 1
-            #     oimode1 = GetOIMode(ser)
-            #     ser.write(RB_START)
-            #     oimode2 = GetOIMode(ser)
-            #     print("OIMode:"+str(oimode1)+"->"+str(oimode2))
-            # elif val=='g':
-            #     print("SAFE")
-            #     stop_flag = 1
-            #     oimode1 = GetOIMode(ser)
-            #     ser.write(RB_SAFE)
-            #     oimode2 = GetOIMode(ser)
-            #     print("OIMode:"+str(oimode1)+"->"+str(oimode2))
-            # elif val=='f':
-            #     print("FULL")
-            #     stop_flag = 1
-            #     oimode1 = GetOIMode(ser)
-            #     ser.write(RB_FULL)
-            #     oimode2 = GetOIMode(ser)
-            #     print("OIMode:"+str(oimode1)+"->"+str(oimode2))
-            # elif val=='w':
-            #     print("DOCK")
-            #     ser.write(RB_SEEK_DOCK)
-            # elif val=='z':
-            #     print("SENSOR")
-            #     # el,er = GetEncs(ser)
-            #     oimode = GetOIMode(ser)
-            #     vol = GetSensor(ser, RB_VOLTAGE, 2, False)
-            #     cur = GetSensor(ser, RB_CURRENT, 2, False)
-                
-            #     # print("Enc L:"+str(el)+" R:"+str(er))
-            #     print("OIMode:"+str(oimode))
-            #     print("Votage/Current ="+str(vol)+"[mV]/"+str(cur)+"[mA]")
+        # val=input('Input command char: ')
+        #print("Input val="+val)
+        if mode[0] == 0:
+            # print("STOP MOTOR")
+            # stop_flag = 1
+            DrivePWM(ser, 0,0)
+            # time.sleep(0.1)
+            EncL = GetSensor(ser, RB_LEFT_ENC, 2, False)
+            EncR = GetSensor(ser, RB_RIGHT_ENC, 2, False)
+            time.sleep(0.01)
+            print(EncL, EncR)
+            end = time.time() - start
+            
+            SendData = struct.pack(
+                'fffff',
+                float( EncR ),
+                float( EncL ),
+                float( memory[0] ),
+                float( memory[1] ),
+                float( end )
+            )
+            
+            # Send data with UDP
+            Sender.sendto(SendData, Destination)
 
-            # else:
-            #     print("Input val="+val)
+            memory[0] = EncR
+            memory[1] = EncL
+        elif mode[0] == 2:
+            # print("FWR(1)")
+            stop_flag = 0
+            DrivePWM(ser, speed,speed)
+            # time.sleep(0.1)
+            EncL = GetSensor(ser, RB_LEFT_ENC, 2, False)
+            EncR = GetSensor(ser, RB_RIGHT_ENC, 2, False)
+            time.sleep(0.01)
+            print(EncL, EncR)
+            end = time.time() - start
+            
+            SendData = struct.pack(
+                'fffff',
+                float( EncR ),
+                float( EncL ),
+                float( memory[0] ),
+                float( memory[1] ),
+                float( end )
+            )
+            
+            # Send data with UDP
+            Sender.sendto(SendData, Destination)
 
-    except KeyboardInterrupt:
-        exit_signal.set()
+            memory[0] = EncR
+            memory[1] = EncL
+        else:
+            # print("STOP MOTOR")
+            # stop_flag = 1
+            DrivePWM(ser, 0,0)
+            time.sleep(0.01)
+            # print("ROT-R(0)")
+            # stop_flag = 0
+            # DrivePWM(ser, speed_rot,-speed_rot)
+        # elif val=='2':
+        #     print("ROT-L(2)")
+        #     stop_flag = 0
+        #     DrivePWM(ser, -speed_rot,speed_rot)
+        # elif val=='1':
+        #     print("FWR(1)")
+        #     stop_flag = 0
+        #     DrivePWM(ser, speed,speed)
+        # elif val=='3':
+        #     print("BACK(3)")
+        #     stop_flag = 0
+        #     DrivePWM(ser, -speed,-speed)
+        # elif val=='d':
+        #     print("RESET")
+        #     stop_flag = 1
+        #     ser.write(RB_RESET)
+        #     str1 = ser.read(234)
+        #     print(str1)
+        # elif val=='a':
+        #     print("START")
+        #     stop_flag = 1
+        #     oimode1 = GetOIMode(ser)
+        #     ser.write(RB_START)
+        #     oimode2 = GetOIMode(ser)
+        #     print("OIMode:"+str(oimode1)+"->"+str(oimode2))
+        # elif val=='g':
+        #     print("SAFE")
+        #     stop_flag = 1
+        #     oimode1 = GetOIMode(ser)
+        #     ser.write(RB_SAFE)
+        #     oimode2 = GetOIMode(ser)
+        #     print("OIMode:"+str(oimode1)+"->"+str(oimode2))
+        # elif val=='f':
+        #     print("FULL")
+        #     stop_flag = 1
+        #     oimode1 = GetOIMode(ser)
+        #     ser.write(RB_FULL)
+        #     oimode2 = GetOIMode(ser)
+        #     print("OIMode:"+str(oimode1)+"->"+str(oimode2))
+        # elif val=='w':
+        #     print("DOCK")
+        #     ser.write(RB_SEEK_DOCK)
+        # elif val=='z':
+        #     print("SENSOR")
+        #     # el,er = GetEncs(ser)
+        #     oimode = GetOIMode(ser)
+        #     vol = GetSensor(ser, RB_VOLTAGE, 2, False)
+        #     cur = GetSensor(ser, RB_CURRENT, 2, False)
+            
+        #     # print("Enc L:"+str(el)+" R:"+str(er))
+        #     print("OIMode:"+str(oimode))
+        #     print("Votage/Current ="+str(vol)+"[mV]/"+str(cur)+"[mA]")
+
+        # else:
+        #     print("Input val="+val)
+
+    # except KeyboardInterrupt:
+    #     exit_signal.set()
             
 if __name__ == '__main__':
     main()
