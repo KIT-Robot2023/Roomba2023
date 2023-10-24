@@ -2,11 +2,11 @@
 #include <stdio.h>
 #include <stdlib.h>//exit()用
 #include <math.h>
-#include "serial.h"
+#include "../include/serial.h"
 #include <time.h>
 #include <unistd.h>//usleep用
-#include "roomba_cmd.h"
-#include "roomba_types.h"
+#include "../include/roomba_cmd.h"
+#include "../include/roomba_types.h"
 
 double mstime1=0;//msec単位での時間計測
 double mstime2=0;
@@ -14,7 +14,7 @@ double mstime2=0;
 //--------------
 //☆☆☆☆☆☆☆シリアルポート設定☆☆☆☆☆☆☆☆
 //#define SERIAL_PORT_1 "/dev/ttyS16"
-#define SERIAL_PORT_1 "\\\\.\\COM6"
+#define SERIAL_PORT_1 "\\\\.\\COM10"
 //--------------
 
 char buf1[1024];

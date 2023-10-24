@@ -1,22 +1,17 @@
 CC = g++
-CC_MINGW32 = c:\Program Files (x86)\CodeBlocks\MinGW\bin\g++
-CC_MINGW64 = c:\Program Files\CodeBlocks\MinGW\bin\g++
-CC_MINGW64VSC = c:\cprog20\mingw64\bin\g++
-SRC = roomba_test.cpp serial.cpp
+CC_MINGW64VSC = c:\mingw64\bin\g++.exe
+CXXFLAGS    = -Wall -Wextra -std=c++17
+SAMPLE = src/roomba_test.cpp src/serial.cpp
+SRC = main.cpp src/serial.cpp src/roomba.cpp src/roomba_command.cpp src/songs.cpp
 WIN_LIB32 := mingw32_lib/libfreeglut/libfreeglut.a
 WIN_LIB64 := mingw32_lib/libfreeglut/x64/freeglut.lib
 WIN_OPT = -lglu32 -lm -lopengl32 -static -lstdc++ -lgcc  -lwinpthread
 
-all:linux
+all:win64
 
 win64:
-#	$(CC_MINGW64VSC) -o roomba_test_d.exe $(SRC) -lm 
-	$(CC_MINGW64VSC) -o roomba_test_d.exe $(SRC)  $(WIN_OPT) 
-
-
-win64GLUT:
-	$(CC_MINGW64) -o roomba_test_d.exe $(SRC) $(WIN_OPT) $(WIN_LIB64)
-
+	$(CC_MINGW64VSC) -o roomba_test_d.exe $(SAMPLE)  $(WIN_OPT) 
+	$(CC_MINGW64VSC) $(CXXFLAGS) -o roomba.exe $(SRC)  $(WIN_OPT) 
 
 linux:
 	$(CC) -o roomba_test_d.exe $(SRC) -L/usr/lib  -lm 

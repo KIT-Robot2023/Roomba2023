@@ -27,7 +27,7 @@
 #endif
 
 #include <stdio.h>
-#include "serial.h"
+#include "../include/serial.h"
 
 #ifdef LINUX
   int fd, res;
@@ -267,4 +267,38 @@ if(flag_opened!=1)
 
 }
 //---------------------------------------------------------------------------
+int serial::send(uint8_t *buf_ptr,int size)
+{
+//バッファの内容を送る
+unsigned long byte;
+if(flag_opened!=1)
+{
+  printf("send() error. port Not opend\n");//debug
+  printf("flag_opened=%d\n",flag_opened);//debug
+  return -1;
+}
+
+#ifdef WIN32
+    if(WriteFile(hcom,buf_ptr,size,&byte,NULL))
+    //↑bufferから読み出し＆hcom(通信ポート)へ書き込み
+    {
+      return byte;
+    }
+    else return -1;
+#endif
+
+#ifdef LINUX
+    byte = write(fd,buf_ptr,size);
+    if(byte==0)
+      {
+	//printf("write error byte 0\n");//debug
+	return -1;
+      }
+    //printf("write byte=%d\n",byte);
+    return (byte);
+#endif
+
+}
+//---------------------------------------------------------------------------
+
 
