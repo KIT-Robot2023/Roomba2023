@@ -1,0 +1,109 @@
+#VRML V2.0 utf8
+
+DEF Drone WorldInfo {
+  title "drone"
+}
+Background {
+  skyColor 0.6 0.8 1
+}
+DEF Top_View Viewpoint {
+  description "Top_View"
+  position 0 0 250
+}
+DEF Front_View_2 Viewpoint {
+  description "Front_View_2"
+  position 0 180 100
+  orientation 0 0.5 0.866 3.142
+}
+DEF Side_View_2 Viewpoint {
+  description "Side_View_2"
+  position 200 0 50
+  orientation 0.5774 0.5774 0.5774 2.094
+}
+DEF drone Transform {
+  children [
+    DEF propeller_1 Transform {
+      translation 2 2 0
+      rotation 1 0 0 1.5708
+      children Shape {
+        appearance Appearance {
+          material Material {
+            diffuseColor 0.8 1 0.8
+          }
+        }
+        geometry Cylinder {
+          radius 2
+          height 0.5
+        }
+      }
+    }
+    DEF propeller_2 Transform {
+      translation -2 2 0
+      rotation 1 0 0 1.5708
+      children Shape {
+        appearance Appearance {
+          material Material {
+            diffuseColor 0.8 1 0.8
+          }
+        }
+        geometry Cylinder {
+          radius 2
+          height 0.5
+        }
+      }
+    }
+    DEF propeller_3 Transform {
+      translation 2 -2 0
+      rotation 1 0 0 1.5708
+      children Shape {
+        appearance Appearance {
+          material Material {
+            diffuseColor 0.8 1 0.8
+          }
+        }
+        geometry Cylinder {
+          radius 2
+          height 0.5
+        }
+      }
+    }
+    DEF propeller_4 Transform {
+      translation -2 -2 0
+      rotation 1 0 0 1.5708
+      children Shape {
+        appearance Appearance {
+          material Material {
+            diffuseColor 0.8 1 0.8
+          }
+        }
+        geometry Cylinder {
+          radius 2
+          height 0.5
+        }
+      }
+    }
+  ]
+}
+DEF floor Transform {
+  translation 0 0 -0.5
+  children Shape {
+    appearance Appearance {
+      material Material {
+        diffuseColor 0.6 0.6 0.6
+      }
+    }
+    geometry Box {
+      size 200 200 0.5
+    }
+  }
+}
+DEF Front_View_1 Viewpoint {
+  description "Front_View_1"
+  position 0 200 5
+  orientation 0 0.7071 0.7071 3.142
+}
+DEF Side_View_1 Viewpoint {
+  description "Side_View_1"
+  position 200 0 5
+  orientation 0.5774 0.5774 0.5774 2.094
+}
