@@ -15,26 +15,27 @@ class Roomba_Odometry
 public:
     Roomba_Odometry() {}
     Roomba_Odometry(int radius, int tread){
-        r = radius;
-        t = tread;
+        r = radius/1000.0;
+        t = tread/1000.0;
     }
 
-    void get_odometry(int get_dt, int get_L_pulse, int get_R_pulse)
+    void get_odometry(int get_now, int get_L_pulse, int get_R_pulse)
     {
         /*calculation odometry*/
-        dt = float(get_dt);
+        now_time = float(get_now)/1000.0; //ms -> s
+        dt = now_time - pre_time;
         L_pulse = float(get_L_pulse);
         R_pulse = float(get_R_pulse);
 
-        L_theta = 2 * M_PI * (L_pulse / 508.8);
-        R_theta = 2 * M_PI * (R_pulse / 508.8);
+        L_theta = 2 * M_PI * r * (L_pulse / 508.8);
+        R_theta = 2 * M_PI * r * (R_pulse / 508.8);
 
         L_omega = (L_theta - L_theta_pre) / dt;
         R_omega = (R_theta - R_theta_pre) / dt;
         L_V = r*L_omega;
         R_V = r*R_omega;
 
-        V = 0.5*(L_V*R_V);
+        V = 0.5*(L_V+R_V);
         omega = 1/t*(R_V - L_V);
 
         theta = omega_pre *dt + theta_pre;
@@ -49,19 +50,35 @@ public:
         theta_pre = theta;
         x_pos_pre = x_pos;
         y_pos_pre = y_pos;
+        pre_time = now_time;
     }
+
+    float get_now_time(){return now_time;}
+
+    float get_L_pulse(){return L_pulse;}
+    float get_R_pulse(){return R_pulse;}
+
+    float get_L_theta(){return L_theta;}
+    float get_R_theta(){return R_theta;}
+
+    float get_L_V(){return L_V;}
+    float get_R_V(){return R_V;}
+
+    float get_V(){return V;}
+    float get_omega(){return omega;}
 
     float get_x_pos(){return x_pos;}
     float get_y_pos(){return y_pos;}
     float get_theta(){return theta;}
-    float get_V(){return V;}
-    float get_omega(){return omega;}
+
 
 private:
 
-    int r;
-    int t;
+    float r;
+    float t;
 
+    float now_time;
+    float pre_time;
     float dt;
     float L_pulse;
     float R_pulse;

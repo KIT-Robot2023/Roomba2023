@@ -1,7 +1,7 @@
 CC = g++
 CC_MINGW32 = c:\Program Files (x86)\CodeBlocks\MinGW\bin\g++
 CC_MINGW64 = c:\Program Files\CodeBlocks\MinGW\bin\g++
-CC_MINGW64VSC = c:\cprog20\mingw64\bin\g++
+CC_MINGW64VSC = c:\MinGW\bin\g++.exe
 SRC = roomba_test.cpp serial.cpp
 WIN_LIB32 := mingw32_lib/libfreeglut/libfreeglut.a
 WIN_LIB64 := mingw32_lib/libfreeglut/x64/freeglut.lib
