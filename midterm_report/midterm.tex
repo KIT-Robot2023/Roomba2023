@@ -1,0 +1,130 @@
+\documentclass[a4paper]{jarticle}
+\usepackage{mlstyle2015,eqnarray,graphicx,amssymb,amsmath,latexsym}
+\usepackage{stfloats,color,ascmac}
+\usepackage{listings,jlisting}
+\usepackage{here,bm,url}
+
+\graphicspath{{ImageFile/}}
+\title{レポートタイトル}
+\author{村尾研究室 所属 : 五十嵐 壮英}
+\date{\todayAD}
+
+% -- プログラムを記述するための設定 -- %
+\lstset{
+  basicstyle={\ttfamily},
+  identifierstyle={\small},
+  commentstyle={\smallitshape},
+  keywordstyle={\small\bfseries},
+  ndkeywordstyle={\small},
+  stringstyle={\small\ttfamily},
+  frame={tb},
+  breaklines=true,
+  columns=[l]{fullflexible},
+  numbers=left,
+  xrightmargin=0zw,
+  xleftmargin=3zw,
+  numberstyle={\scriptsize},
+  stepnumber=1,
+  numbersep=1zw,
+  lineskip=-0.5ex
+}
+
+% -- 本文 -- %
+\begin{document}
+\maketitle
+% ===================================================================== %
+\section{aaa}
+\label{aaa}
+ここに記述する
+\vspace{2.5mm}
+%
+\subsection{aaa-1}
+\label{aaa-1}
+ここに記述する
+\vspace{7.5mm}
+% ===================================================================== %
+\section{bbb}
+\label{bbb}
+ここに記述する
+\vspace{2.5mm}
+%
+\subsection{bbb-1}
+\label{bbb-1}
+ここに記述する
+\vspace{7.5mm}
+% ===================================================================== %
+\section{ccc}
+\label{ccc}
+ここに記述する
+\vspace{2.5mm}
+%
+\subsection{ccc-1}
+\label{ccc-1}
+ここに記述する
+\vspace{7.5mm}
+% ===================================================================== %
+\section{ddd}
+\label{ddd}
+プログラムを記述する．
+行番号を途中から始めたい場合は，引数として"firstnumber="を設定する
+%
+\begin{lstlisting}[caption={firstnumber=101の場合}, firstnumber=101]
+aaa
+\end{lstlisting}
+%
+\begin{lstlisting}[caption={firstnumber=50の場合}, firstnumber=50]
+aaa
+\end{lstlisting}
+% 
+% ===================================================================== %
+\end{document}
+
+
+% == 画像挿入例 1枚 ==
+% 
+% \begin{figure}[H]
+%     \centering
+%     % \includegraphics[width=100mm]{~~~.eps}
+%     \caption{aaa}
+%     \label{aaa}
+% \end{figure}
+% 
+% == 画像挿入例 複数枚 ==
+% 
+% \begin{figure}[H]
+%     \begin{minipage}[H]{0.45\linewidth}
+%         \centering
+%         \includegraphics[width=50mm]{~~~.eps}
+%         \vspace{-2mm}
+%         \caption{aaa}
+%         \label{aaa}
+%     \end{minipage}
+%     % 
+%     \begin{minipage}[H]{0.45\linewidth}
+%         \centering
+%         \includegraphics[width=50mm]{~~~.eps}
+%         \vspace{-2mm}
+%         \caption{aaa}
+%         \label{aaa}
+%     \end{minipage}
+% \end{figure}
+% 
+% == 表挿入例 ==
+% 
+% \begin{table}[H]
+%     \centering
+%     \caption{aaa}
+%     \label{aaa}
+%     \vspace{1.5mm}
+%     \begingroup
+%     \renewcommand{\arraystretch}{1.3} % 数値で高さ倍率が変わる
+%     \begin{tabular}{|c|c|} 
+%         \hline 
+%         a & b \\
+%         \hline
+%         \hline
+%         1 & 1 \\
+%         \hline 
+%     \end{tabular}
+%     \endgroup
+% \end{table}
