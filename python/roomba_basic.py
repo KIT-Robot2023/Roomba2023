@@ -2,6 +2,7 @@
 # coding: utf-8
 #2020.1.14西野君ソースコードQlearn_and_run.pyを参考
 
+
 import numpy as np
 import math
 import time
