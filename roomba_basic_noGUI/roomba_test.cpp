@@ -4,6 +4,7 @@
 #include <math.h>
 #include "serial.h"
 #include <time.h>
+#include <iostream>
 #include <unistd.h>//usleep用
 #include "roomba_cmd.h"
 #include "roomba_types.h"
@@ -11,10 +12,49 @@
 double mstime1=0;//msec単位での時間計測
 double mstime2=0;
 
+
+double t_before=0;
+double t_after;
+double t_diff;
+
+double pi=3.1415;
+double tire_r=36;
+double tread=235;
+
+int encode_R_after;
+int encode_L_after;
+int encode_R_before;
+int encode_L_before;
+int encode_R_diff;
+int encode_L_diff;
+
+double v_L;
+double v_R;
+
+double v_st_after = 0;
+double v_st_before;
+
+double omega_L;
+double omega_R;
+double theta_L_diff;
+double theta_R_diff;
+
+double omega_after;
+double omega_before;
+double omega_diff;
+
+double theta_t_before;
+double theta_t_after=0;
+double x_t=0;
+double y_t=0;
+
+double kyori=0;
+
+
 //--------------
 //☆☆☆☆☆☆☆シリアルポート設定☆☆☆☆☆☆☆☆
 //#define SERIAL_PORT_1 "/dev/ttyS16"
-#define SERIAL_PORT_1 "\\\\.\\COM6"
+#define SERIAL_PORT_1 "\\\\.\\COM23"
 //--------------
 
 char buf1[1024];
@@ -62,6 +102,7 @@ double get_millisec(void)
 return ms_out;
 
 }
+
 void sleep_msec(int millisec_in)
 {
 	//get_millisec()を使う方法．ビジーループで時間を測る
@@ -80,6 +121,8 @@ void sleep_msec(int millisec_in)
     //for(int i=0;i<millisec_in;i++)
     //    usleep(1000);//test
 }
+
+
 //--------------------------
 //変数初期化
 //--------------------------
@@ -102,6 +145,8 @@ printf("init()..");
 //    usleep(1000);//test
 printf("Done.\n");
 }
+
+
 //--------------------------
 //シリアル通信
 //--------------------------
@@ -155,13 +200,15 @@ char send_drive_command(int motL, int motR, int port_in)
 	byte=5;
 	s->send(sbuf,byte);
 
-	sprintf(buf1,"send_drive_command() rb[%d]sbuf[]=[%d:%d:%d:%d]\n",
-		port_in,
-		(unsigned char)sbuf[0],(unsigned char)sbuf[1],(unsigned char)sbuf[2],(unsigned char)sbuf[3]);
+	// sprintf(buf1,"send_drive_command() rb[%d]sbuf[]=[%d:%d:%d:%d]\n",
+	// 	port_in,
+	// 	(unsigned char)sbuf[0],(unsigned char)sbuf[1],(unsigned char)sbuf[2],(unsigned char)sbuf[3]);
 		//printf(buf1);
-	printf("%s",buf1);
+	// printf("%s",buf1);
+	//printf("abaaaaaa!");
 	return 1;
 }
+
 //--------
 char send_pwm_motors_command(int main_brush_pwm_in, int side_brush_pwm_in, int vacuum_pwm_in, int port_in)
 {
@@ -215,6 +262,7 @@ int send_play_song_command(int song, int port_in)
 	return byte;
 
 }
+
 //--------------------------
 int send_seek_dock_command(int port_in)
 {
@@ -296,6 +344,7 @@ int receive_initial_message(int port_in)
     printf("[%d byte]\n",pos+res_byte);
 return 1;
 }
+
 //--------------------------
 char get_sensor_1B(int sensor_no, int port_in)
 {
@@ -313,6 +362,7 @@ char get_sensor_1B(int sensor_no, int port_in)
 	sbuf[0]=RB_SENSORS;//コマンド
 	sbuf[1]=(unsigned char)sensor_no;//センサ番号
 	s->send(sbuf,2);
+	//printf("rbuf = %d\n", rbuf[0]);
 
     //printf("get_sensor_1B(%d) -- ",sensor_no);
 	//受信
@@ -364,9 +414,12 @@ int get_sensor_2B(int sensor_no, int port_in)
 
     return dat;
 }
+
 //--------------------------
 char get_sensors(int port_in)
 {
+    //t_after=get_millisec();
+
     if(flag_serial_ready[port_in]!=1)return -1;//ポート準備ができていなければ処理しない．
 
     serial *s=&rb_serial[port_in];
@@ -374,9 +427,12 @@ char get_sensors(int port_in)
 
 	s->purge();//シリアル通信のバッファクリア
 
+//roomba[port_in].sensor.stat = get_sensor_1B(58,port_in);
+// char hoge = get_sensor_1B(58,port_in);
+// std::cout << "hoge: " << (int)hoge << std::endl;
 rss->stat=get_sensor_1B(58,port_in);
-rss->EncL=get_sensor_2B(43,port_in);
-rss->EncR=get_sensor_2B(44,port_in);
+rss->EncL=get_sensor_2B(43,port_in);//エンコーダL
+rss->EncR=get_sensor_2B(44,port_in);//エンコーダR
 rss->LBumper=get_sensor_1B(45,port_in);
 rss->LBumper_L=get_sensor_2B(46,port_in);
 rss->LBumper_FL=get_sensor_2B(47,port_in);
@@ -387,11 +443,87 @@ rss->LBumper_R=get_sensor_2B(51,port_in);
 rss->Angle=get_sensor_2B(20,port_in);//値が怪しい
 rss->Distance=get_sensor_2B(19,port_in);//値が怪しい.ゼロしか出ない
 
-	mstime2=get_millisec();
-	rss->TimeNow=mstime2-mstime1;//現在時刻 201101 clock_gettime()使用
+	mstime2 = get_millisec();
+rss->TimeNow = mstime2 - mstime1;//現在時刻 201101 clock_gettime()使用
+	//rss->t_diff=t_after-t_before;
+	//t_before=t_after;
+    //int hoge;
 
 return 1;
 }
+
+/***********************************************
+        オドメトリ
+************************************************/
+char get_odo(int port_in)
+{
+    t_after = get_millisec();
+    t_diff = (t_after - t_before)/1000;
+    //t_after=get_millisec();
+
+    if(flag_serial_ready[port_in]!=1)return -1;//ポート準備ができていなければ処理しない．
+
+    serial *s=&rb_serial[port_in];
+    RoombaSensor *rss=&roomba[port_in].sensor;
+
+	s->purge();
+
+	encode_L_after = get_sensor_2B(43,port_in);
+	encode_R_after = get_sensor_2B(44,port_in);
+
+    encode_L_diff = encode_L_after - encode_L_before;
+    encode_R_diff = encode_R_after - encode_R_before;
+
+    theta_L_diff = 2 * pi * double(encode_L_diff) / 508.8;
+    theta_R_diff = 2 * pi * double(encode_R_diff) / 508.8;
+
+    omega_L = theta_L_diff / t_diff;
+    omega_R = theta_R_diff / t_diff;
+
+    v_L = (tire_r/1000) * omega_L; //[m/s]左タイヤの回転速度
+    v_R = (tire_r/1000) * omega_R; //[m/s]右タイヤの回転速度
+
+    v_st_after = (v_L+v_R) / 2; //[m/s]並進速度
+
+    omega_after =(v_R-v_L)/(tread/1000); //[rad/s]旋回角速度
+
+	kyori = v_st_after * t_diff;
+
+	theta_t_after = omega_after * t_diff;
+	x_t = kyori * cos(theta_t_after) + x_t;
+	y_t = kyori * sin(theta_t_after) + y_t;
+
+    // x_t = v_st_before * cos(theta_t_before) * t_diff + x_t; //xの距離
+    // y_t = v_st_before * sin(theta_t_before) * t_diff + y_t; //yの距離
+    // theta_t_after = omega_before * t_diff + theta_t_before; //ルンバ自体の回転
+
+	printf("\n");
+	printf("/-----------------/\n");
+	printf("/---odometori-----/\n");
+	printf("/-----------------/\n");
+	// printf("%d",t_before);
+	printf("encode_L_diff = %d [count] , encode_R_diff = %d [count] , t_diff = %.2f [s] ,t_after = %6.2f,\n",//.0f←小数点つき出力変換指定子
+       encode_L_diff , encode_R_diff , t_diff , t_after
+    );
+	printf("theta_L_diff = %.2f [rad] , theta_R_diff = %.2f [rad] , omega_L =%.2f [rad/s] , omega_R = %.2f [rad/s]\n",theta_L_diff , theta_R_diff , omega_L , omega_R);
+	printf("v_L = %.4f [m/s] , v_R = %.4f [m/s] , v_st_after = %.4f [m/s] , omega_after = %.4f [rad/s]\n" , v_L , v_R , v_st_after , omega_after);
+	printf("kyori = %.4f [m]\n" , kyori);
+	printf("theta_t_after = %.4f \n" , theta_t_after);
+	printf("x_t = %.4f [m] , y_t = %.4f [m] , theta_t_after = %.4f [rad]\n" , x_t , y_t , theta_t_after);
+	printf("\n");
+
+
+    t_before = t_after;
+    encode_L_before = encode_L_after;
+    encode_R_before = encode_R_after;
+    theta_t_before = theta_t_after;
+    omega_before = omega_after;
+    v_st_before = v_st_after;
+
+return 1;
+}
+
+
 //--------------------------
 void print_sensors(int port_in)
 {
@@ -434,8 +566,8 @@ void drive_tires(int dir_in)
 
 	RoombaSystem *rb=&roomba[port];
 
-	int speed=70;
-	int speed_rot=40;
+	int speed=120;
+	int speed_rot=100;
     rb->flag_sensor_ready=1;
 
 	if(rb->flag_roomba_moving==1)//移動中のボタン入力→移動キャンセル
@@ -602,24 +734,63 @@ void keyf(unsigned char key , int x , int y)//一般キー入力
     	}
     	case '0':
     	{
-    	    drive_tires(0);
+    	    get_odo(port);
+    	    drive_tires(0);//turn right
+
             break;
     	}
     	case '1':
     	{
-    	    drive_tires(1);
+    	    get_odo(port);
+    	    drive_tires(1);//go forward
+
             break;
     	}
     	case '2':
     	{
-    	    drive_tires(2);
+    	    get_odo(port);
+    	    drive_tires(2);//turn left
+
             break;
     	}
     	case '3':
     	{
-    	    drive_tires(3);
+    	    get_odo(port);
+    	    drive_tires(3);//go backward
+
             break;
     	}
+
+    	case '4':
+    	{
+			get_odo(port);
+    	    drive_tires(1);//go backward
+    	    sleep_msec(3000);
+    	    drive_tires(1);
+    	    get_odo(port);
+            break;
+    	}
+
+    	case '5':
+    	{
+			get_odo(port);
+    	    drive_tires(3);//go backward
+    	    sleep_msec(3000);
+    	    drive_tires(3);
+    	    get_odo(port);
+            break;
+    	}
+
+		case '6':
+    	{
+			get_odo(port);
+    	    drive_tires(0);//go backward
+    	    sleep_msec(3000);
+    	    drive_tires(0);
+    	    get_odo(port);
+            break;
+    	}
+
     	case 'q':
     	case 'Q':
     	case '\033':  /* '\033' は ESC の ASCII コード */
@@ -642,18 +813,25 @@ void keyf(unsigned char key , int x , int y)//一般キー入力
             printf("\n");
             break;
     	}
+
     }
 }
 //-----------------------
 void key_input(void)
 {
     int key;
+    int port=current_control_port;
+    send_command_one(RB_START, port);
+    send_command_one(RB_SAFE, port);
+    get_odo(port);
     while(1)
     {
     printf("keyf() input: ");
     key=getchar();
     printf("[%c]\n",key);
     keyf(key,0,0);
+	//get_odo(port);
+
     }
 }
 
@@ -682,7 +860,9 @@ int id;
 
 
    	init();//変数初期化
+	sleep_msec(10);
 	mstime1=get_millisec();//時間計測開始
+	t_before=get_millisec();//時間計測開始
 
 	//キーボード割り当て表示
 	print_keys();
