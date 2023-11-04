@@ -769,6 +769,8 @@ int main(int argc, char **argv)
 	get_sensors(port);
 	ini_Enc_L = roomba[port].sensor.EncL;
 	ini_Enc_R = roomba[port].sensor.EncR;
+	RoombaSensor *rss = &roomba[port].sensor;
+	Od.get_odometry(roomba[port].sensor.TimeNow, rss->EncL - ini_Enc_L, rss->EncR - ini_Enc_R);
 	// printf("ini_Enc:");
 	// printf("%d,%d",ini_Enc_L,ini_Enc_R);
 
