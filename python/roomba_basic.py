@@ -23,7 +23,7 @@ RB_LEDS  = 139 #//LED制御
 RB_VOLTAGE = 22 #バッテリー電圧
 RB_CURRENT = 23 #バッテリー電圧
 
-'''モータ入力用バイト計算関数'''
+'''モータ入力用バイト計算関数''' #引数nの，上の８バイト分をHB，下の８バイト分をLBとして分割してreturnする関数．0xff00と両方1のところのみ１にするから
 def _CalcHLByte(n):
     HB = n & 0xff00
     HB >>= 8
@@ -32,19 +32,19 @@ def _CalcHLByte(n):
     return (HB, LB)
 
 '''モータへのPWM信号入力関数'''
-def DrivePWM(ser, L_PWM, R_PWM):
-    L_HB, L_LB = _CalcHLByte(L_PWM)
-    R_HB, R_LB = _CalcHLByte(R_PWM)
+def DrivePWM(ser, L_PWM, R_PWM): # 両輪のPWM信号を，上位と下位のビットで分割して保存，その後ser.writeする関数　serはserialのインスタンスで，mainで作成されている
+    L_HB, L_LB = _CalcHLByte(L_PWM) #左のモータのPWM値をバイト計算して上位と下位に分けて変数に保存
+    R_HB, R_LB = _CalcHLByte(R_PWM) #右のモータのPWM値をバイト計算して上位と下位に分けて変数に保存
             
-    ser.write(bytes([146, R_HB, R_LB, L_HB, L_LB]))
+    ser.write(bytes([146, R_HB, R_LB, L_HB, L_LB])) #146, (10010010)の後に，分けたバイトデータを並べてる
 
 '''センサ値取得関数'''
 def GetSensor(ser, p_id, len, sign_flg):
     ser.write(bytes([142, p_id]))
-    ser.flushInput()
-    data = ser.read(len)
+    ser.flushInput() #シリアル通信でデータを受信する際のバッファを保存しているところをクリアにする
+    data = ser.read(len) #指定した長さ分だけ読み取る
     
-    return int.from_bytes(data, "big", signed=sign_flg)
+    return int.from_bytes(data, "big", signed=sign_flg) #sign_flgとは？？？
 
 '''各エンコーダ値取得関数'''
 def GetEncs(ser):
@@ -67,16 +67,26 @@ def GetBumps(ser):
     
     return BumpC
 
+#＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃オリジナル
+def play_song(ser, song_number):
+    # # RoombaをSafeモードに設定
+    # ser.write(b'\x83')
+    
+    # 選択した曲を再生
+    ser.write(bytes([141, song_number]))
+    time.sleep(0.5)  # 必要に応じて適切な待ち時間を追加してください
+#＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
 
 
 def main():
     '''シリアル通信用変数'''
-    RB_START = bytes([128])
+    RB_START = bytes([128]) #各モードを起動するためのバイトコードを送るためのもの
     RB_RESET = bytes([7])
     RB_STOP  = bytes([173])
     RB_SAFE  = bytes([131])
     RB_FULL  = bytes([132])
     RB_SEEK_DOCK  = bytes([143]) #//ドックを探す
+    # RB_PLAY = bytes([118])
     RB_RATE = 115200
     
     print("--- Roomba Control via python ---")
@@ -141,6 +151,17 @@ def main():
         elif val=='w':
             print("DOCK")
             ser.write(RB_SEEK_DOCK)
+
+        elif val=='p':# 音を再生
+            ser.write(bytes([140, 0, 2, 60, 32, 62, 32]))  # 60と62はノート番号、32は持続時間 つまり，bytesを使えば簡単にシリアルデータを送信できるぞ
+            # ここで，140はモード，0は曲の番号（０番目の曲に音をセットする），音を出す数は２音，６０の音を32という時間だけ流す，６２という音を３２という時間だけ流す
+            play_song(ser, 0)
+            time.sleep(2)  # 2秒待つ
+
+            ser.write(bytes([140, 1, 18, 74, 16, 74, 16, 76, 32,74, 32, 79, 32, 78, 64, 74, 16, 74, 16, 76, 32, 74, 32, 81, 32, 79, 64, 74, 16, 74, 16, 88, 32, 84, 32, 81, 32, 79, 64]))
+            play_song(ser, 1)
+            time.sleep(2)  # 2秒待つ例
+
         elif val=='z':
             print("SENSOR")
             el,er = GetEncs(ser)

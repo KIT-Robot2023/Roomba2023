@@ -14,7 +14,7 @@ double mstime2=0;
 //--------------
 //☆☆☆☆☆☆☆シリアルポート設定☆☆☆☆☆☆☆☆
 //#define SERIAL_PORT_1 "/dev/ttyS16"
-#define SERIAL_PORT_1 "\\\\.\\COM6"
+#define SERIAL_PORT_1 "\\\\.\\COM4"
 //--------------
 
 char buf1[1024];
