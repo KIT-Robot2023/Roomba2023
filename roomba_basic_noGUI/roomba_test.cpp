@@ -453,6 +453,77 @@ return 1;
 }
 
 /***********************************************
+        Sensor初期化
+************************************************/
+char odo_init(int port_in)
+{
+    t_after = get_millisec();
+    t_diff = (t_after - t_before)/1000;
+    //t_after=get_millisec();
+
+    if(flag_serial_ready[port_in]!=1)return -1;//ポート準備ができていなければ処理しない．
+
+    serial *s=&rb_serial[port_in];
+    RoombaSensor *rss=&roomba[port_in].sensor;
+
+	s->purge();
+
+	encode_L_after = get_sensor_2B(43,port_in);
+	encode_R_after = get_sensor_2B(44,port_in);
+
+    encode_L_diff = encode_L_after - encode_L_before;
+    encode_R_diff = encode_R_after - encode_R_before;
+
+    // theta_L_diff = 2 * pi * double(encode_L_diff) / 508.8;
+    // theta_R_diff = 2 * pi * double(encode_R_diff) / 508.8;
+
+    // omega_L = theta_L_diff / t_diff;
+    // omega_R = theta_R_diff / t_diff;
+
+    // v_L = (tire_r/1000) * omega_L; //[m/s]左タイヤの回転速度
+    // v_R = (tire_r/1000) * omega_R; //[m/s]右タイヤの回転速度
+
+    // v_st_after = (v_L+v_R) / 2; //[m/s]並進速度
+
+    // omega_after =(v_R-v_L)/(tread/1000); //[rad/s]旋回角速度
+
+	// kyori = v_st_after * t_diff;
+
+	// theta_t_after = omega_after * t_diff;
+	// x_t = kyori * cos(theta_t_after) + x_t;
+	// y_t = kyori * sin(theta_t_after) + y_t;
+
+    // x_t = v_st_before * cos(theta_t_before) * t_diff + x_t; //xの距離
+    // y_t = v_st_before * sin(theta_t_before) * t_diff + y_t; //yの距離
+    // theta_t_after = omega_before * t_diff + theta_t_before; //ルンバ自体の回転
+
+	printf("\n");
+	printf("/-----------------/\n");
+	printf("/---odometori-----/\n");
+	printf("/-----------------/\n");
+	// printf("%d",t_before);
+	printf("encode_L_diff = %d [count] , encode_R_diff = %d [count] , t_diff = %.2f [s] ,t_after = %6.2f,\n",//.0f←小数点つき出力変換指定子
+       encode_L_diff , encode_R_diff , t_diff , t_after
+    );
+	printf("theta_L_diff = %.2f [rad] , theta_R_diff = %.2f [rad] , omega_L =%.2f [rad/s] , omega_R = %.2f [rad/s]\n",theta_L_diff , theta_R_diff , omega_L , omega_R);
+	printf("v_L = %.4f [m/s] , v_R = %.4f [m/s] , v_st_after = %.4f [m/s] , omega_after = %.4f [rad/s]\n" , v_L , v_R , v_st_after , omega_after);
+	printf("kyori = %.4f [m]\n" , kyori);
+	printf("theta_t_after = %.4f \n" , theta_t_after);
+	printf("x_t = %.4f [m] , y_t = %.4f [m] , theta_t_after = %.4f [rad]\n" , x_t , y_t , theta_t_after);
+	printf("\n");
+
+
+    t_before = t_after;
+    encode_L_before = encode_L_after;
+    encode_R_before = encode_R_after;
+    theta_t_before = theta_t_after;
+    omega_before = omega_after;
+    v_st_before = v_st_after;
+
+return 1;
+}
+
+/***********************************************
         オドメトリ
 ************************************************/
 char get_odo(int port_in)
@@ -489,7 +560,7 @@ char get_odo(int port_in)
 
 	kyori = v_st_after * t_diff;
 
-	theta_t_after = omega_after * t_diff;
+	theta_t_after = omega_after * t_diff + theta_t_after;
 	x_t = kyori * cos(theta_t_after) + x_t;
 	y_t = kyori * sin(theta_t_after) + y_t;
 
@@ -734,28 +805,28 @@ void keyf(unsigned char key , int x , int y)//一般キー入力
     	}
     	case '0':
     	{
-    	    get_odo(port);
+    	    // get_odo(port);
     	    drive_tires(0);//turn right
 
             break;
     	}
     	case '1':
     	{
-    	    get_odo(port);
+    	    // get_odo(port);
     	    drive_tires(1);//go forward
 
             break;
     	}
     	case '2':
     	{
-    	    get_odo(port);
+    	    // get_odo(port);
     	    drive_tires(2);//turn left
 
             break;
     	}
     	case '3':
     	{
-    	    get_odo(port);
+    	    // get_odo(port);
     	    drive_tires(3);//go backward
 
             break;
@@ -787,6 +858,12 @@ void keyf(unsigned char key , int x , int y)//一般キー入力
     	    drive_tires(0);//go backward
     	    sleep_msec(3000);
     	    drive_tires(0);
+    	    get_odo(port);
+            break;
+    	}
+
+		case 'o':
+    	{
     	    get_odo(port);
             break;
     	}
@@ -823,13 +900,14 @@ void key_input(void)
     int port=current_control_port;
     send_command_one(RB_START, port);
     send_command_one(RB_SAFE, port);
-    get_odo(port);
+    odo_init(port);
     while(1)
     {
     printf("keyf() input: ");
     key=getchar();
     printf("[%c]\n",key);
     keyf(key,0,0);
+	get_odo(port);
 	//get_odo(port);
 
     }
