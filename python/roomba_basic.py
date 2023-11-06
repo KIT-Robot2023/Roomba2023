@@ -6,6 +6,7 @@ import numpy as np
 import math
 import time
 import serial
+import matplotlib as plt
 
 ###############################################################
 RB_PORT = "COM4"#シリアルポート設定
@@ -193,48 +194,70 @@ def main():
             # ここで，140はモード，0は曲の番号（０番目の曲に音をセットする），音を出す数は２音，６０の音を32という時間だけ流す，６２という音を３２という時間だけ流す
             play_song(ser, 0) #オドメトリ起動音再生
             time.sleep(2)  # 2秒待つ
-            
-            # まずは最初のエンコーダ値取得，そして開始時間も取得
-            print("get encoder value...")
-            encL_prev, encR_prev = GetEncs(ser) # 左右のエンコーダの値取得
-            t_prev = time.time() # プログラムの実行開始時刻を取得 time.time()は，システムが起動してから何秒経ったかを取得してくれる関数　よってこれを引き算することで経過時間（秒）を得られる
-            print("最初のエンコーダの値は:左が"+str(encL_prev)+"で，右が"+str(encL_prev)+"です．時間も取得しました")
+
+            #初期角度と位置を設定
+            sennkai_delta_ang = (math.pi/2) #初期の角度は2分のパイつまりxy平面でy軸方向を向いている
+            Roomba_xpos = 0
+            Roomba_ypos = 0
 
             #モータを動かす．（まずは直進させてみる）
             print("Go_Straight！！")
             stop_flag = 0
             DrivePWM(ser, 70,70)
-            time.sleep(2) #2秒間，前進させる
-            encL, encR = GetEncs(ser) # 左右のエンコーダの値再び取得
-            now_time = time.time() # 現在の時刻を取得
 
-            delta_encL = encL_prev - encL
-            delta_encR = encR_prev - encR #エンコーダの値の差を取る
-            delta_t = t_prev - now_time #経過時間（秒）を取得
+            # まずは最初のエンコーダ値取得，そして開始時間も取得
+            # print("get encoder value...")
+            encL_prev, encR_prev = GetEncs(ser) # 左右のエンコーダの値取得
+            t_prev = time.time() # プログラムの実行開始時刻を取得 time.time()は，システムが起動してから何秒経ったかを取得してくれる関数　よってこれを引き算することで経過時間（秒）を得られる
+            print("最初のエンコーダの値は:左が"+str(encL_prev)+"で，右が"+str(encL_prev)+"です．時間も取得しました")
 
-            move_range_L = ((2*math.pi*TIRE_R)/508.8) * encL
-            move_range_R = ((2*math.pi*TIRE_R)/508.8) * encR #各タイヤの移動量を，エンコーダの値の差から算出
+            start_time = time.time()
+            while time.time() - start_time < 5:  # 現在の時刻と開始時刻の差が5秒未満の間 つまり5秒間ループ処理
+                #モータを動かす．（まずは直進させてみる）
+                print("Go_Straight！！")
+                stop_flag = 0
+                DrivePWM(ser, 70,70)
+                time.sleep(0.01) # 一定時間待機
+                encL, encR = GetEncs(ser) # 左右のエンコーダの値再び取得
+                now_time = time.time() # 現在の時刻を取得
 
-            rotation_angle_L = ((2*math.pi)/508.8) * encL
-            rotation_angle_R = ((2*math.pi)/508.8) * encR #出たパルス分（encL,R）の回転角度を計算
+                #微小区間の値を取得
+                delta_encL = encL_prev - encL
+                delta_encR = encR_prev - encR #エンコーダの値の差を取る
+                #(＃＃＃＃＃＃65535繰り上げ処理＃＃＃＃＃＃＃＃＃＃＃＃)
+                delta_t = t_prev - now_time #経過時間（秒）を取得
 
-            rotational_ang_vel_L = rotation_angle_L / delta_t #単位時間当たりの回転角度を計算すると，角速度が求められる
-            rotational_ang_vel_R = rotation_angle_R / delta_t #
+                #計算
+                move_range_L = ((2*math.pi*TIRE_R)/508.8) * encL
+                move_range_R = ((2*math.pi*TIRE_R)/508.8) * encR #各タイヤの移動量を，エンコーダの値の差から算出
 
-            L_vel = TIRE_R * rotational_ang_vel_L #角速度に半径をかけると，速度になる（v = rω）
-            R_vel = TIRE_R * rotational_ang_vel_R
+                rotation_angle_L = ((2*math.pi)/508.8) * encL
+                rotation_angle_R = ((2*math.pi)/508.8) * encR #出たパルス分（encL,R）の回転角度を計算
 
-            Roomba_speed = (L_vel + R_vel)/2 # 並進速度(左右の速度の平均) つまりルンバ自体の速度となる＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
+                rotational_ang_vel_L = rotation_angle_L / delta_t #単位時間当たりの回転角度を計算すると，角速度が求められる
+                rotational_ang_vel_R = rotation_angle_R / delta_t #
+                # v_L, v_R 計算
+                L_vel = TIRE_R * rotational_ang_vel_L #角速度に半径をかけると，速度になる（v = rω）
+                R_vel = TIRE_R * rotational_ang_vel_R
+                # 並進V,旋回 ω を計算
+                Roomba_speed = (L_vel + R_vel)/2 # 並進速度(左右の速度の平均) つまりルンバ自体の速度となる＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
+                Roomba_senkai_speed = (L_vel - R_vel)/TREAD #ルンバ自体の回転（旋回）速度を計算 方向は符号で判断可能＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
 
-            Roomba_senkai_speed = (L_vel - R_vel)/TREAD #ルンバ自体の回転（旋回）速度を計算 方向は符号で判断可能＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
+                #あとは，微笑時間ごとにルンバの速度と旋回から，進んだ方向と長さを計算して足していけばよい！（厳密な積分ではなく離散積分になるので，リーマン和という）
+                #まずはルンバの向きを算出し，微笑時間ごとの角度変化を累積していくことで現在のルンバの向き情報を取得する．
+                # ルンバの向きは，微小時間の旋回速度の旋回の和より， (距離＝速度×時間)を使って，方向の変化を求める．そして足していく
+                sennkai_delta_ang += Roomba_senkai_speed * delta_t #Δtを使った離散積分で（θ，x，y）を更新
+                print("ルンバの角度："+str(math.degrees(sennkai_delta_ang))+"度  （x座標軸から）")
+                #ルンバ自体の速度の情報から移動距離を計算できるので，微笑時間ごとの移動距離を計算して足しこんでいく．そして向きの情報から，cosとsinを使って，x軸方向の移動距離とy軸方向の移動距離を計算して累積していくことで移動した座標が推定できる（尾止め鳥）
+                Roomba_xpos += Roomba_speed * math.cos(sennkai_delta_ang) * delta_t #ルンバの速度のx成分を微小時間ごとに足しこんて累積していくことでx座標の微小区間の移動距離を取得
+                Roomba_ypos += Roomba_speed * math.sin(sennkai_delta_ang) * delta_t #ルンバの速度のy成分を微小時間ごとに足しこんて累積していくことでx座標の微小区間の移動距離を取得
 
-            #あとは，微笑時間ごとにルンバの速度と旋回から，進んだ方向と長さを計算して足していけばよい！（厳密な積分ではなく離散積分になるので，リーマン和という）
-            #まずはルンバの向きを算出し，微笑時間ごとの角度変化を累積していくことで現在のルンバの向き情報を取得する．
-            # ルンバの向きは，微小時間の旋回速度の旋回の和より， (距離＝速度×時間)を使って，方向の変化を求める．
-            sennkai_delta_ang += Roomba_senkai_speed * delta_t
-            #ルンバ自体の速度の情報から移動距離を計算できるので，微笑時間ごとの移動距離を計算して足しこんでいく．そして向きの情報から，cosとsinを使って，x軸方向の移動距離とy軸方向の移動距離を計算して累積していくことで移動した座標が推定できる（尾止め鳥）
-            Roomba_xpos = Roomba_speed * sennkai_delta_ang * delta_t #ルンバの速度のx成分を微小時間ごとに足しこんて累積していくことでx座標の距離を取得
-            Roomba_ypos = Roomba_speed * sennkai_delta_ang * delta_t #ルンバの速度のx成分を微小時間ごとに足しこんて累積していくことでx座標の距離を取得
+                print("ルンバのｘ座標：" + str(Roomba_xpos))
+                print("ルンバのｙ座標：" + str(Roomba_ypos))
+                #以前の値更新
+                encL_prev = encL
+                encR_prev = encR
+                t_prev = now_time
 
 
 
@@ -246,6 +269,11 @@ def main():
             ser.write(bytes([139, 8, 0, 255]))
             time.sleep(1)  # 1秒待つ
             # ser.write(RB_SEEK_DOCK)
+            plt.plot(Roomba_xpos, Roomba_ypos)
+            plt.title('Roomba_pos_predict')
+            # plt.show()
+            # 画像ファイルに保存する
+            plt.savefig('output.png')
 
         else:
             print("Input val="+val)
