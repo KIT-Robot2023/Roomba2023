@@ -9,15 +9,19 @@ import serial
 
 ###############################################################
 RB_PORT = "COM4"#シリアルポート設定
-######################################################################
+################################################################
+
+'''ルンバ実機の長さなどの値'''
+TREAD = 235 # (mm)  単位はミリ
+TIRE_R = 36 # (mm)  単位はミリ
 
 '''シリアル通信用変数'''
-RB_LEFT_ENC = 43 #左エンコーダカウント
-RB_RIGHT_ENC = 44 #//右エンコーダカウント
+RB_LEFT_ENC = 43 #左エンコーダカウントのOPcode
+RB_RIGHT_ENC = 44 #//右エンコーダカウントのOPcode
 
-RB_SONG  = 140 #//メロディ記憶．
-RB_PLAY  = 141 #//メロディ再生．1バイトデータ必要
-RB_OI_MODE  = 35 #//ルンバのモードを返す
+RB_SONG  = 140 #//メロディ記憶モードのOPcode
+RB_PLAY  = 141 #//メロディ再生のOPcode　このOPcodeの後ろに，曲を選択する数字（４まで）が必要（１バイト？）ser.write(bytes([141, →song_number←]))とすればよい
+RB_OI_MODE  = 35 #//ルンバの現在のモードを返す
 RB_LEDS  = 139 #//LED制御
 
 RB_VOLTAGE = 22 #バッテリー電圧
@@ -38,13 +42,13 @@ def DrivePWM(ser, L_PWM, R_PWM): # 両輪のPWM信号を，上位と下位のビ
             
     ser.write(bytes([146, R_HB, R_LB, L_HB, L_LB])) #146, (10010010)の後に，分けたバイトデータを並べてる
 
-'''センサ値取得関数'''
+'''センサ値取得関数''' #指定されたセンサーに対してリクエストを送信して、そのセンサーからの応答を整数として返す。符号つき整数に変換するかどうかは、sign_flg をTrueにするかで決める。
 def GetSensor(ser, p_id, len, sign_flg):
     ser.write(bytes([142, p_id]))
     ser.flushInput() #シリアル通信でデータを受信する際のバッファを保存しているところをクリアにする
     data = ser.read(len) #指定した長さ分だけ読み取る
     
-    return int.from_bytes(data, "big", signed=sign_flg) #sign_flgとは？？？
+    return int.from_bytes(data, "big", signed=sign_flg) #sign_flgとは？？　←符号つけるかどうかのフラグ　ここではbigというやり方で，取得したdataをバイト列から整数に変換している　　具体的には、dataに格納されたバイト列を大端 (big endian) フォーマットで整数に変換
 
 '''各エンコーダ値取得関数'''
 def GetEncs(ser):
@@ -74,7 +78,7 @@ def play_song(ser, song_number):
     
     # 選択した曲を再生
     ser.write(bytes([141, song_number]))
-    time.sleep(0.5)  # 必要に応じて適切な待ち時間を追加してください
+    time.sleep(0.5)
 #＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
 
 
@@ -86,6 +90,7 @@ def main():
     RB_SAFE  = bytes([131])
     RB_FULL  = bytes([132])
     RB_SEEK_DOCK  = bytes([143]) #//ドックを探す
+    RB_LED = bytes([139]) #LED制御のOPcode　使い方→　Serial sequence: [139] [LED Bits (0 - 255)] [Power Color] [Power Intensity]
     # RB_PLAY = bytes([118])
     RB_RATE = 115200
     
@@ -117,6 +122,7 @@ def main():
             print("FWR(1)")
             stop_flag = 0
             DrivePWM(ser, speed,speed)
+            print('出てますか？')
         elif val=='3':
             print("BACK(3)")
             stop_flag = 0
@@ -158,9 +164,17 @@ def main():
             play_song(ser, 0)
             time.sleep(2)  # 2秒待つ
 
-            ser.write(bytes([140, 1, 18, 74, 16, 74, 16, 76, 32,74, 32, 79, 32, 78, 64, 74, 16, 74, 16, 76, 32, 74, 32, 81, 32, 79, 64, 74, 16, 74, 16, 88, 32, 84, 32, 81, 32, 79, 64]))
+            # ser.write(bytes([140, 1, 18, 74, 16, 74, 16, 76, 32,74, 32, 79, 32, 78, 64, 74, 16, 74, 16, 76, 32, 74, 32, 81, 32, 79, 64, 74, 16, 74, 16, 88, 32, 84, 32, 81, 32, 79, 64]))
+            ser.write(bytes([140, 1, 6, 74, 16, 74, 16, 76, 32,74, 32, 79, 32, 78, 64,]))
+            # time.sleep(2)  # 2秒待つ
             play_song(ser, 1)
-            time.sleep(2)  # 2秒待つ例
+            time.sleep(1)  # 2秒待つ
+
+        elif val=='l':
+            print("LED_MODE!")
+            ser.write(bytes([139, 8, 0, 255]))
+            time.sleep(1)  # 1秒待つ
+            # ser.write(RB_SEEK_DOCK)
 
         elif val=='z':
             print("SENSOR")
@@ -172,6 +186,66 @@ def main():
             print("Enc L:"+str(el)+" R:"+str(er))
             print("OIMode:"+str(oimode))
             print("Votage/Current ="+str(vol)+"[mV]/"+str(cur)+"[mA]")
+
+        elif val=='od':
+            print("Odometry test mode ON!")
+            ser.write(bytes([140, 0, 4, 60, 8, 62, 8, 64, 8, 66, 8]))  # オドメトリモード起動音セット　　60と62はノート番号、32は持続時間 つまり，bytesを使えば簡単にシリアルデータを送信できるぞ
+            # ここで，140はモード，0は曲の番号（０番目の曲に音をセットする），音を出す数は２音，６０の音を32という時間だけ流す，６２という音を３２という時間だけ流す
+            play_song(ser, 0) #オドメトリ起動音再生
+            time.sleep(2)  # 2秒待つ
+            
+            # まずは最初のエンコーダ値取得，そして開始時間も取得
+            print("get encoder value...")
+            encL_prev, encR_prev = GetEncs(ser) # 左右のエンコーダの値取得
+            t_prev = time.time() # プログラムの実行開始時刻を取得 time.time()は，システムが起動してから何秒経ったかを取得してくれる関数　よってこれを引き算することで経過時間（秒）を得られる
+            print("最初のエンコーダの値は:左が"+str(encL_prev)+"で，右が"+str(encL_prev)+"です．時間も取得しました")
+
+            #モータを動かす．（まずは直進させてみる）
+            print("Go_Straight！！")
+            stop_flag = 0
+            DrivePWM(ser, 70,70)
+            time.sleep(2) #2秒間，前進させる
+            encL, encR = GetEncs(ser) # 左右のエンコーダの値再び取得
+            now_time = time.time() # 現在の時刻を取得
+
+            delta_encL = encL_prev - encL
+            delta_encR = encR_prev - encR #エンコーダの値の差を取る
+            delta_t = t_prev - now_time #経過時間（秒）を取得
+
+            move_range_L = ((2*math.pi*TIRE_R)/508.8) * encL
+            move_range_R = ((2*math.pi*TIRE_R)/508.8) * encR #各タイヤの移動量を，エンコーダの値の差から算出
+
+            rotation_angle_L = ((2*math.pi)/508.8) * encL
+            rotation_angle_R = ((2*math.pi)/508.8) * encR #出たパルス分（encL,R）の回転角度を計算
+
+            rotational_ang_vel_L = rotation_angle_L / delta_t #単位時間当たりの回転角度を計算すると，角速度が求められる
+            rotational_ang_vel_R = rotation_angle_R / delta_t #
+
+            L_vel = TIRE_R * rotational_ang_vel_L #角速度に半径をかけると，速度になる（v = rω）
+            R_vel = TIRE_R * rotational_ang_vel_R
+
+            Roomba_speed = (L_vel + R_vel)/2 # 並進速度(左右の速度の平均) つまりルンバ自体の速度となる＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
+
+            Roomba_senkai_speed = (L_vel - R_vel)/TREAD #ルンバ自体の回転（旋回）速度を計算 方向は符号で判断可能＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
+
+            #あとは，微笑時間ごとにルンバの速度と旋回から，進んだ方向と長さを計算して足していけばよい！（厳密な積分ではなく離散積分になるので，リーマン和という）
+            #まずはルンバの向きを算出し，微笑時間ごとの角度変化を累積していくことで現在のルンバの向き情報を取得する．
+            # ルンバの向きは，微小時間の旋回速度の旋回の和より， (距離＝速度×時間)を使って，方向の変化を求める．
+            sennkai_delta_ang += Roomba_senkai_speed * delta_t
+            #ルンバ自体の速度の情報から移動距離を計算できるので，微笑時間ごとの移動距離を計算して足しこんでいく．そして向きの情報から，cosとsinを使って，x軸方向の移動距離とy軸方向の移動距離を計算して累積していくことで移動した座標が推定できる（尾止め鳥）
+            Roomba_xpos = Roomba_speed * sennkai_delta_ang * delta_t #ルンバの速度のx成分を微小時間ごとに足しこんて累積していくことでx座標の距離を取得
+            Roomba_ypos = Roomba_speed * sennkai_delta_ang * delta_t #ルンバの速度のx成分を微小時間ごとに足しこんて累積していくことでx座標の距離を取得
+
+
+
+
+
+
+
+
+            ser.write(bytes([139, 8, 0, 255]))
+            time.sleep(1)  # 1秒待つ
+            # ser.write(RB_SEEK_DOCK)
 
         else:
             print("Input val="+val)
