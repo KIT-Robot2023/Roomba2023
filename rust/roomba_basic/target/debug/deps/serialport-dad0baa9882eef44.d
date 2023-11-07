@@ -1,0 +1,10 @@
+C:\Users\Takara\Desktop\roomba\Roomba2023\rust\roomba_basic\target\debug\deps\serialport-dad0baa9882eef44.rmeta: C:\Users\Takara\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serialport-4.2.2\src\lib.rs C:\Users\Takara\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serialport-4.2.2\src\windows\mod.rs C:\Users\Takara\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serialport-4.2.2\src\windows\com.rs C:\Users\Takara\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serialport-4.2.2\src\windows\dcb.rs C:\Users\Takara\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serialport-4.2.2\src\windows\enumerate.rs C:\Users\Takara\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serialport-4.2.2\src\windows\error.rs
+
+C:\Users\Takara\Desktop\roomba\Roomba2023\rust\roomba_basic\target\debug\deps\serialport-dad0baa9882eef44.d: C:\Users\Takara\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serialport-4.2.2\src\lib.rs C:\Users\Takara\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serialport-4.2.2\src\windows\mod.rs C:\Users\Takara\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serialport-4.2.2\src\windows\com.rs C:\Users\Takara\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serialport-4.2.2\src\windows\dcb.rs C:\Users\Takara\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serialport-4.2.2\src\windows\enumerate.rs C:\Users\Takara\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serialport-4.2.2\src\windows\error.rs
+
+C:\Users\Takara\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serialport-4.2.2\src\lib.rs:
+C:\Users\Takara\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serialport-4.2.2\src\windows\mod.rs:
+C:\Users\Takara\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serialport-4.2.2\src\windows\com.rs:
+C:\Users\Takara\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serialport-4.2.2\src\windows\dcb.rs:
+C:\Users\Takara\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serialport-4.2.2\src\windows\enumerate.rs:
+C:\Users\Takara\.cargo\registry\src\index.crates.io-6f17d22bba15001f\serialport-4.2.2\src\windows\error.rs:
