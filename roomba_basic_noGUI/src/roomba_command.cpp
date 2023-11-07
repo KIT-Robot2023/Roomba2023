@@ -271,9 +271,13 @@ bool Command::serial_port_init_() {
 }
 
 int Command::joint_high_low_byte_(int hbyte, int lbyte) {
-    int result = 0;
-    result = (hbyte << 8) | lbyte;
-    return result;
+	//上位バイトと下位バイトの結合
+	int hb,lb,val;
+	hb=(0x00ff&hbyte);
+	val=(hbyte<<8);
+	val|=(0x00ff&lbyte);
+    // printf("H[0x%x]:L[0x%x]  -- val[%d]\n", hbyte, lbyte, val);
+	return val;
 }
 
 char Command::set_drive_command_(char *buffer_out, int left_pwm, int right_pwm) {
@@ -322,7 +326,7 @@ char Command::get_sensor_1B_(int sensor_no) {
     return db;
 }
 
-char Command::get_sensor_2B_(int sensor_no) {
+int Command::get_sensor_2B_(int sensor_no) {
     // 2バイト(int)センサデータ受信
     if (serial_port_ready_ != true) return -1;  ////ポート準備ができていなければ処理しない．
 

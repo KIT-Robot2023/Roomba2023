@@ -49,6 +49,6 @@ private:
     int joint_high_low_byte_(int hbyte, int lbyte);
     char set_drive_command_(char *buf_out, int left_motor_pwm, int right_motor_pwm);
     char get_sensor_1B_(int sensor_no);
-    char get_sensor_2B_(int sensor_no);
+    int get_sensor_2B_(int sensor_no);
 };
 }  // namespace roomba
