@@ -14,7 +14,7 @@ double mstime2=0;
 //--------------
 //☆☆☆☆☆☆☆シリアルポート設定☆☆☆☆☆☆☆☆
 //#define SERIAL_PORT_1 "/dev/ttyS16"
-#define SERIAL_PORT_1 "\\\\.\\COM10"
+#define SERIAL_PORT_1 "\\\\.\\COM12"
 //--------------
 
 char buf1[1024];
@@ -133,7 +133,7 @@ void comport_scan()
 char send_command_one(int cmd_in, int port_in)
 {
 //port_inは0 or 1
-	char *sbuf=roomba[port_in].sbuf;
+	 char*sbuf=roomba[port_in].sbuf;
 	serial *s=&rb_serial[port_in];
 	sbuf[0]=(unsigned char)cmd_in;//1バイト分セット．usigned charに型セット
 	s->send(sbuf,1);//コマンド送信

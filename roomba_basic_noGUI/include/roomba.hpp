@@ -2,6 +2,7 @@
 #include <chrono>
 #include <iostream>
 
+#include "diff2_odometry.hpp"
 #include "roomba_command.hpp"
 
 namespace roomba {
@@ -29,13 +30,15 @@ class Roomba {
 public:
     Roomba() = default;
     ~Roomba() = default;
-    Roomba(roomba::Command &command) : command_(command){};
+    Roomba(roomba::Command &command, diff2_odometry::Diff2Odometry &odometry)
+        : command_(command), odometry_(odometry){};
     bool init();
     void cycle();
-    void drive(int left_pwm, int right_pwm);
+    void drive(int left_vel, int right_vel);  //[mm/s]
     const Sensors &sensors() { return sensors_; };
+    const diff2_odometry::Diff2OdometryState &odo() { return odometry_.state(); }
     void set_mode();
-    std::chrono::steady_clock::time_point current_time() const { current_time(); };
+    std::chrono::steady_clock::time_point current_time() const { return current_time_; };
 
 private:
     void get_sensors_() {
@@ -43,6 +46,7 @@ private:
         sensors_.enc_right = command_.get_encoder_right();
     };
     roomba::Command &command_;
+    diff2_odometry::Diff2Odometry &odometry_;
     roomba::Sensors sensors_;
 
     std::chrono::steady_clock::time_point prev_time_;
