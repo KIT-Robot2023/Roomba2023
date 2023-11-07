@@ -47,10 +47,10 @@ def print_encs_value(ser, memory):
         check_L = EncL - Memory[0]
         check_R = EncR - Memory[1]
 
-        # if abs(check_L) > 50000 or abs(check_R) > 50000:
-        #     Memory[0] = EncL
-        #     Memory[1] = EncR
-        #     continue
+        if abs(check_L) > 50000 or abs(check_R) > 50000:
+            Memory[0] = EncL
+            Memory[1] = EncR
+            continue
 
         theta_L = (2.0 * math.pi) * (float(EncL) / 508.8)
         theta_R = (2.0 * math.pi) * (float(EncR) / 508.8)
@@ -79,6 +79,12 @@ def print_encs_value(ser, memory):
         Memory[2] = Theta
         Memory[3] = x_t
         Memory[4] = y_t
+
+        cal_end = time.time() - start
+        check = 0.1 - cal_end
+
+        if check > 0:
+            time.sleep(check)
         
         SendData = struct.pack(
             'ffffffff',
@@ -197,8 +203,8 @@ def main():
     Reciever = Set_UDP_Receive(local, recv_port)
 
     memory = [0, 0, 0, 0, 0]
-    speed_L=70
-    speed_R=90
+    speed_L=90
+    speed_R=77
     speed_rot=50
     mode = [1, speed_L, speed_R, 0]
 
@@ -216,7 +222,7 @@ def main():
     time.sleep(1)
 
     print_function()
-    time.sleep(1)
+    # time.sleep(1)
     
     try:
         while True:
@@ -232,10 +238,23 @@ def main():
                 DrivePWM(ser, 0,0)
 
             elif val == '1':
+                mode[1] = 70
+                mode[2] = 77
                 DrivePWM(ser, mode[1], mode[2])
 
             elif val == '2':
                 DrivePWM(ser, -mode[1], -mode[2])
+
+            elif val == '3':
+                DrivePWM(ser, -mode[1], mode[2])
+
+            elif val == '4':
+                DrivePWM(ser, mode[1], -mode[2])
+
+            elif val == '5':
+                mode[1] = 50
+                mode[2] = 77
+                DrivePWM(ser, mode[1], mode[2])
 
             else:
                 DrivePWM(ser, 0,0)
