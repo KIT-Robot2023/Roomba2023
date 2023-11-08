@@ -61,7 +61,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("START");
                     stop_flag = true;
                     let oimode1 = get_oi_mode(&mut serial_port)?;
-                    serial_port.write(&[128])?;
+                    let data = vec![128];
+                    let byte_data: Vec<u8> = data.iter().map(|&x| x as u8).collect();
+                    let byte_slice: &[u8] = &byte_data;
+                    serial_port.write(byte_slice)?;
                     let oimode2 = get_oi_mode(&mut serial_port)?;
                     println!("OIMode:{}->{}", oimode1, oimode2);
                 }
@@ -69,7 +72,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("SAFE");
                     stop_flag = true;
                     let oimode1 = get_oi_mode(&mut serial_port)?;
-                    serial_port.write(&[131])?;
+                    let data = vec![131];
+                    let byte_data: Vec<u8> = data.iter().map(|&x| x as u8).collect();
+                    let byte_slice: &[u8] = &byte_data;
+                    serial_port.write(byte_slice)?;
                     let oimode2 = get_oi_mode(&mut serial_port)?;
                     println!("OIMode:{}->{}", oimode1, oimode2);
                 }
@@ -77,13 +83,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("FULL");
                     stop_flag = true;
                     let oimode1 = get_oi_mode(&mut serial_port)?;
-                    serial_port.write(&[132])?;
+                    let data = vec![132];
+                    let byte_data: Vec<u8> = data.iter().map(|&x| x as u8).collect();
+                    let byte_slice: &[u8] = &byte_data;
+                    serial_port.write(byte_slice)?;
                     let oimode2 = get_oi_mode(&mut serial_port)?;
                     println!("OIMode:{}->{}", oimode1, oimode2);
                 }
                 "w" => {
                     println!("DOCK");
-                    serial_port.write(&[143])?;
+                    let data = vec![143];
+                    let byte_data: Vec<u8> = data.iter().map(|&x| x as u8).collect();
+                    let byte_slice: &[u8] = &byte_data;
+                    serial_port.write(byte_slice)?;
                 }
                 "z" => {
                     println!("SENSOR");
@@ -111,17 +123,22 @@ fn read_input() -> Result<String, std::io::Error> {
 }
 
 fn drive_pwm(port: &mut Box<dyn SerialPort>, l_pwm: i16, r_pwm: i16) -> Result<(), std::io::Error> {
-    let l_hb = (l_pwm >> 8) as u8;
+    let l_hb = (((l_pwm as u16) & 0xFF00) >> 8) as u8;
     let l_lb = (l_pwm & 0x00FF) as u8;
-    let r_hb = (r_pwm >> 8) as u8;
+    let r_hb = (((r_pwm as u16) & 0xFF00) >> 8) as u8;
     let r_lb = (r_pwm & 0x00FF) as u8;
-
-    port.write(&[146, r_hb, r_lb, l_hb, l_lb])?;
+    let data = vec![146, r_hb, r_lb, l_hb, l_lb];
+    let byte_data: Vec<u8> = data.iter().map(|&x| x as u8).collect();
+    let byte_slice: &[u8] = &byte_data;
+    port.write(byte_slice)?;
     Ok(())
 }
 
 fn get_sensor(port: &mut Box<dyn SerialPort>, p_id: u8, len: usize, sign_flg: bool) -> Result<i16, std::io::Error> {
-    port.write(&[142, p_id])?;
+    let data = vec![142, p_id];
+    let byte_data: Vec<u8> = data.iter().map(|&x| x as u8).collect();
+    let byte_slice: &[u8] = &byte_data;
+    port.write(byte_slice)?;
     let mut data = vec![0u8; len];
     port.read_exact(&mut data)?;
 
