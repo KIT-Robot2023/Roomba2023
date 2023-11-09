@@ -2,12 +2,17 @@
 #include <stdio.h>
 #include <stdlib.h> //exit()用
 #include <math.h>
-#include "serial.h"
 #include <time.h>
+#include <thread>
+#include <Windows.h>
+#include <conio.h>
 // #include <unistd.h>//usleep用
+
+#include "serial.h"
 #include "roomba_cmd.h"
 #include "roomba_types.h"
 #include "Roomba_Odometry.h"
+#include "time.hpp"
 
 double mstime1 = 0; // msec単位での時間計測
 double mstime2 = 0;
@@ -24,7 +29,7 @@ Roomba_Odometry Od(36, 235);
 //--------------
 // ☆☆☆☆☆☆☆シリアルポート設定☆☆☆☆☆☆☆☆
 // #define SERIAL_PORT_1 "/dev/ttyS16"
-#define SERIAL_PORT_1 "\\\\.\\COM6"
+#define SERIAL_PORT_1 "\\\\.\\COM11"
 //--------------
 
 char buf1[1024];
@@ -41,34 +46,6 @@ int current_control_port = 0; // 現在操縦対象のポート
 
 long MotionStartTime = 0; // モーションが始まったときの時刻
 
-//--------------------------
-// 時間管理
-//--------------------------
-double get_millisec(void)
-{
-	double ms_out;
-
-// #define CPP11_TIME //Linux, WSL, code::blocks64bit版など
-#undef CPP11_TIME // code::blocks32bit版など
-
-#ifdef CPP11_TIME
-	// Linux C++11用
-	struct timespec ts_temp;
-	double sec_1, sec_2;
-	clock_gettime(CLOCK_REALTIME, &ts_temp);
-	sec_1 = ts_temp.tv_sec * 1000;	   // 秒以上msecに直す
-	sec_2 = ts_temp.tv_nsec / 1000000; // 秒以下msecに直す
-	ms_out = sec_1 + sec_2;
-#else
-	// clock()関数を使う方法
-	clock_t ck1 = clock();
-	double sec1 = (double)ck1 / (CLOCKS_PER_SEC);
-	ms_out = sec1 * 1000;
-#endif
-
-	// printf("get_millisec() %f\n",ms_out);//debug
-	return ms_out;
-}
 void sleep_msec(int millisec_in)
 {
 	// get_millisec()を使う方法．ビジーループで時間を測る
@@ -88,7 +65,6 @@ void sleep_msec(int millisec_in)
 	// for(int i=0;i<millisec_in;i++)
 	//     usleep(1000);//test
 }
-
 
 //--------------------------
 // シリアル通信
@@ -375,9 +351,9 @@ char get_sensors(int port_in)
 	// rss->Distance=get_sensor_2B(19,port_in);//値が怪しい.ゼロしか出ない
 
 	mstime2 = get_millisec();
-	printf("mstime2 = %lf\n",mstime2);
+	printf("mstime2 = %lf\n", mstime2);
 	rss->TimeNow = mstime2 - mstime1; // 現在時刻 201101 clock_gettime()使用
-	printf("timenow = %ld\n",rss->TimeNow);
+	printf("timenow = %ld\n", rss->TimeNow);
 
 	return 1;
 }
@@ -426,17 +402,17 @@ void drive_tires(int dir_in)
 	int speed_rot = 40;
 	rb->flag_sensor_ready = 1;
 
-	if (rb->flag_roomba_moving == 1) // 移動中のボタン入力→移動キャンセル
-	{
-		printf("STOP\n");
-		rb->CommandSpeedL = 0;
-		rb->CommandSpeedR = 0;
-		rb->flag_roomba_moving = 0;
+	// if (rb->flag_roomba_moving == 1) // 移動中のボタン入力→移動キャンセル
+	// {
+	// 	printf("STOP\n");
+	// 	rb->CommandSpeedL = 0;
+	// 	rb->CommandSpeedR = 0;
+	// 	rb->flag_roomba_moving = 0;
 
-		send_drive_command(0, 0, port);
+	// 	send_drive_command(0, 0, port);
 
-		return;
-	}
+	// 	return;
+	// }
 
 	if (dir_in == 1)
 	{
@@ -522,9 +498,8 @@ void init(int port_in)
 	roomba[port_in].odo.y = 0;
 	roomba[port_in].trj_count = 0;
 	roomba[port_in].roomba_moving_direction = -1; // 移動方向を表す変数
-	roomba[port_in].flag_roomba_moving = 0;		// 移動中のフラグ
-	roomba[port_in].flag_sensor_ready = 0;		// センサが使えるかどうかのフラグ
-
+	roomba[port_in].flag_roomba_moving = 0;		  // 移動中のフラグ
+	roomba[port_in].flag_sensor_ready = 0;		  // センサが使えるかどうかのフラグ
 
 	printf("init()..");
 	sleep_msec(3000);
@@ -671,6 +646,13 @@ void keyf(unsigned char key, int x, int y) // 一般キー入力
 	}
 }
 
+void odmetry_func()
+{
+	get_sensors(current_control_port);
+	RoombaSensor *rss = &roomba[current_control_port].sensor;
+	// printf("timenow2 = %ld\n",roomba[port].sensor.TimeNow);
+	Od.get_odometry(roomba[current_control_port].sensor.TimeNow, rss->EncL - ini_Enc_L, rss->EncR - ini_Enc_R);
+}
 
 //-----------------------
 void key_input(void)
@@ -680,10 +662,12 @@ void key_input(void)
 	int flag = 1;
 	while (flag)
 	{
+		sleep_msec(100);
+
 		/*オドメトリ関連*/
 		get_sensors(port);
 		RoombaSensor *rss = &roomba[port].sensor;
-		printf("timenow2 = %ld\n",roomba[port].sensor.TimeNow);
+		// printf("timenow2 = %ld\n",roomba[port].sensor.TimeNow);
 		Od.get_odometry(roomba[port].sensor.TimeNow, rss->EncL - ini_Enc_L, rss->EncR - ini_Enc_R);
 		// printf("ENC:");
 		// printf("%d,%d,%d\n", roomba[port].sensor.TimeNow,roomba[port].sensor.EncL,roomba[port].sensor.EncR);
@@ -691,26 +675,26 @@ void key_input(void)
 		// roomba[port].odo.y = Od.get_y_pos();
 		// roomba[port].odo.theta = Od.get_theta();
 
-		float time = Od.get_now_time();
-		float dt = Od.get_dt();
+		// float time = Od.get_now_time();
+		// float dt = Od.get_dt();
 
-		float L_pulse = Od.get_L_pulse();
-		float R_pulse = Od.get_R_pulse();
+		// float L_pulse = Od.get_L_pulse();
+		// float R_pulse = Od.get_R_pulse();
 
-		float L_theta = Od.get_L_theta();
-		float R_theta = Od.get_R_theta();
+		// float L_theta = Od.get_L_theta();
+		// float R_theta = Od.get_R_theta();
 
-		float L_omega = Od.get_L_omega();
-		float R_omega = Od.get_R_omega();
-		float L_V = Od.get_L_V();
-		float R_V = Od.get_R_V();
+		// float L_omega = Od.get_L_omega();
+		// float R_omega = Od.get_R_omega();
+		// float L_V = Od.get_L_V();
+		// float R_V = Od.get_R_V();
 
-		float V = Od.get_V();
-		float omega = Od.get_omega();
+		// float V = Od.get_V();
+		// float omega = Od.get_omega();
 
-		roomba[port].odo.x = Od.get_x_pos();
-		roomba[port].odo.y = Od.get_y_pos();
-		roomba[port].odo.theta = Od.get_theta();
+		// roomba[port].odo.x = Od.get_x_pos();
+		// roomba[port].odo.y = Od.get_y_pos();
+		// roomba[port].odo.theta = Od.get_theta();
 
 		// float debug1 = Od.get_L_theta();
 		// float debug2 = Od.get_R_theta();
@@ -723,12 +707,25 @@ void key_input(void)
 		// printf("%lf,%lf,%lf\n",  roomba[port].odo.x, roomba[port].odo.y, roomba[port].odo.theta);
 
 		printf("keyf() input: ");
-		key = getchar();
-		printf("[%c\n]", key);
+		if (_kbhit())
+		{
+			key = getch();
+			// switch (key)
+			// {
+			// }
 		if (key != '\n')
 		{
 			keyf(key, 0, 0);
 		}
+		}else{
+			send_drive_command(0, 0, port);
+		}
+
+		// printf("[%c\n]", key);
+		// if (key != '\n')
+		// {
+		// 	keyf(key, 0, 0);
+		// }
 		// flag = 0;
 	}
 }
@@ -758,10 +755,10 @@ int main(int argc, char **argv)
 	}
 
 	int port = current_control_port;
-	init(port);					  // 変数初期化
+	init(port); // 変数初期化
 
 	mstime1 = get_millisec(); // 時間計測開始
-	printf("mstime1 = %lf\n",mstime1);
+	printf("mstime1 = %lf\n", mstime1);
 
 	// キーボード割り当て表示
 	print_keys();
