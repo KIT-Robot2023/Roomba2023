@@ -1,6 +1,7 @@
 //------------------------
 //データ構造体の定義
 //------------------------
+#pragma once
 #define ROOMBA_TRAJECTORY_MAX 10000 //軌跡のデータ最大値
 
 struct RoombaSensor{

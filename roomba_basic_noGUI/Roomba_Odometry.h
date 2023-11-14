@@ -1,4 +1,6 @@
-// あ　UTF-8エンコード
+// あ　UTF-
+#pragma once
+
 #include <stdio.h>
 #include <stdlib.h> //exit()用
 #include <math.h>
