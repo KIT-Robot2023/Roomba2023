@@ -353,8 +353,8 @@ def main():
 
             start_time = time.time()
             while time.time() - start_time < 3:  # 現在の時刻と開始時刻の差が5秒未満の間 つまり5秒間ループ処理
-                #モータを動かす．（まずは直進させてみる）
-                print("Go_Straight！！")
+                #モータを動かす.
+                print("Go！！")
                 stop_flag = 0
                 DrivePWM(ser, 70,-70)
                 time.sleep(0.2) # 一定時間待機
@@ -374,21 +374,21 @@ def main():
                 move_range_L = ((2*math.pi*TIRE_R)/508.8) * delta_encL
                 move_range_R = ((2*math.pi*TIRE_R)/508.8) * delta_encR #各タイヤの移動量を，エンコーダの値の差から算出
 
-                vL = move_range_L / delta_t
+                vL = move_range_L / delta_t #タイヤの移動量を時間で割ることで，速度を求める
                 vR = move_range_R / delta_t
-                print("L速度:" + str(vL))
-                print("R速度:" + str(vR))
+                print("Lタイヤの速度:" + str(vL) + "mm/s")
+                print("Rタイヤの速度:" + str(vR) + "mm/s")
 
 
                 rotation_angle_L = ((2*math.pi)/508.8) * delta_encL
                 rotation_angle_R = ((2*math.pi)/508.8) * delta_encR #出たパルス分（delta_encL,R）の回転角度を計算
-                print("角速度L:" + str(rotation_angle_L))
-                print("角速度R:" + str(rotation_angle_R))
+                print("Lタイヤの角速度:" + str(rotation_angle_L))
+                print("Rタイヤの角速度:" + str(rotation_angle_R))
 
                 rotational_ang_vel_L = rotation_angle_L / delta_t #単位時間当たりの回転角度を計算すると，角速度が求められる 各タイヤの回転角速度
                 rotational_ang_vel_R = rotation_angle_R / delta_t #
                 Roomba_senkai_speed = (vL - vR)/TREAD #ルンバ自体の回転（旋回）速度を計算 方向は符号で判断可能＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
-                print("旋回角速度ω：" + str(Roomba_senkai_speed))
+                print("ルンバの旋回角速度ω：" + str(math.degrees(Roomba_senkai_speed)) + "度/秒")
                 # v_L, v_R 計算
                 L_vel = TIRE_R * rotational_ang_vel_L #角速度に半径をかけると，速度になる（v = rω）
                 R_vel = TIRE_R * rotational_ang_vel_R
