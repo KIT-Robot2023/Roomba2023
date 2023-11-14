@@ -21,7 +21,7 @@
 #include "Sensor.hpp"
 #include "numkeyCtrl.hpp"
 
-int ctrl_time = 10;
+int ctrl_time = 1;
 int update_time = 100;
 
 Timer ctrl_timer(ctrl_time, true);

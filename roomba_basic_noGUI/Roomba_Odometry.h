@@ -25,27 +25,28 @@ public:
     {
         /*calculation odometry*/
         now_time = float(get_now)/1000.0; //ms -> s
-        printf("od.nowtime = %lf\n",now_time);
+        // printf("od.nowtime = %lf\n",now_time);
+        printf("od.nowtime = %lf",now_time);
         dt = now_time - pre_time;
-        printf("od.dt = %lf\n",dt);
+        // printf("od.dt = %lf\n",dt);
         L_pulse = float(get_L_pulse);
         R_pulse = float(get_R_pulse);
-        printf("od.L_pulse = %lf,od.R_pulse = %lf\n",L_pulse,R_pulse);
+        // printf("od.L_pulse = %lf,od.R_pulse = %lf\n",L_pulse,R_pulse);
 
         L_theta = 2 * M_PI *  (L_pulse / 508.8);
         R_theta = 2 * M_PI *  (R_pulse / 508.8);
-        printf("od.L_theta = %lf,od.R_theta = %lf\n",L_theta,R_theta);
+        // printf("od.L_theta = %lf,od.R_theta = %lf\n",L_theta,R_theta);
         L_omega = (L_theta - L_theta_pre) / dt;
         R_omega = (R_theta - R_theta_pre) / dt;
-        printf("L_theta_diff =%lf,R_theta_diff =%lf\n",L_theta - L_theta_pre,R_theta - R_theta_pre);
-        printf("od.L_omega = %lf,od.R_omega = %lf\n",L_omega,R_omega);
+        // printf("L_theta_diff =%lf,R_theta_diff =%lf\n",L_theta - L_theta_pre,R_theta - R_theta_pre);
+        // printf("od.L_omega = %lf,od.R_omega = %lf\n",L_omega,R_omega);
         L_V = r*L_omega;
         R_V = r*R_omega;
-        printf("od.L_V = %lf,od.R_V = %lf\n",L_V,R_V);
+        // printf("od.L_V = %lf,od.R_V = %lf\n",L_V,R_V);
 
         V = 0.5*(L_V+R_V);
         omega = 1/t*(R_V - L_V);
-        printf("od.V = %lf,od.omega = %lf\n",V,omega);
+        // printf("od.V = %lf,od.omega = %lf\n",V,omega);
 
         theta = omega_pre *dt + theta_pre;
         x_pos = V_pre*cos(theta_pre)*dt+x_pos_pre;
