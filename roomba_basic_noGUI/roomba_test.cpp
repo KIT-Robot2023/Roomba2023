@@ -8,6 +8,7 @@
 #include <unistd.h>//usleep用
 #include "roomba_cmd.h"
 #include "roomba_types.h"
+#include <windows.h>
 
 double mstime1=0;//msec単位での時間計測
 double mstime2=0;
@@ -16,6 +17,7 @@ double mstime2=0;
 double t_before=0;
 double t_after;
 double t_diff;
+double start_time;
 
 double pi=3.1415;
 double tire_r=36;
@@ -50,12 +52,22 @@ double y_t=0;
 
 double kyori=0;
 
+int odo_mode=0;
 
-//--------------
-//☆☆☆☆☆☆☆シリアルポート設定☆☆☆☆☆☆☆☆
-//#define SERIAL_PORT_1 "/dev/ttyS16"
-#define SERIAL_PORT_1 "\\\\.\\COM23"
-//--------------
+/********************************
+	                       ■■  
+	 ■■■■■■   ■■■■   ■■■■■■■■■ 
+	 ■■   ■  ■   ■■   ■  ■ ■■  
+	 ■■   ■  ■    ■   ■    ■■  
+	 ■■   ■■ ■    ■   ■    ■■  
+	 ■■   ■  ■    ■   ■    ■■  
+	 ■■   ■  ■   ■■  ■■    ■■  
+	 ■■■■■■   ■■■■   ■■■    ■■ 
+	 ■■                        
+	 ■■                        
+	 ■■  
+***********************************/
+#define SERIAL_PORT_1 "\\\\.\\COM25"
 
 char buf1[1024];
 char buf2[1024];
@@ -79,6 +91,7 @@ long MotionStartTime=0;//モーションが始まったときの時刻
 double get_millisec(void)
 {
 	double ms_out;
+	double now_time;
 
     #define CPP11_TIME //Linux, WSL, code::blocks64bit版など
     //#undef CPP11_TIME //code::blocks32bit版など
@@ -98,9 +111,10 @@ double get_millisec(void)
 	ms_out=sec1*1000;
     #endif
 
-	//printf("get_millisec() %f\n",ms_out);//debug
-return ms_out;
-
+	// if(!odo_mode){now_time = ms_out;}
+	// else{now_time = ms_out - now_time;}
+	// printf("get_millisec() %f [ms], odo_mode = %d",now_time , odo_mode);//debug
+	return ms_out;
 }
 
 void sleep_msec(int millisec_in)
@@ -140,7 +154,7 @@ void init()
 	}
 
 printf("init()..");
-	sleep_msec(3000);
+	sleep_msec(30);
 //for(int i=0;i<1000;i++)
 //    usleep(1000);//test
 printf("Done.\n");
@@ -188,7 +202,19 @@ char send_command_one(int cmd_in, int port_in)
 	return 1;
 }
 
-//--------
+
+/****************************************
+ ■■■■            ■■                
+  ■   ■■                           
+  ■    ■                           
+  ■    ■■  ■■■■■ ■■ ■■■  ■■   ■■■■ 
+  ■    ■■   ■  ■  ■  ■■   ■  ■   ■ 
+  ■    ■■   ■     ■  ■■  ■   ■   ■■
+  ■    ■■   ■     ■   ■  ■   ■■■■■ 
+  ■    ■■   ■     ■   ■■     ■     
+  ■   ■■   ■■    ■■    ■■    ■■    
+ ■■■■■■    ■■■   ■■■   ■■     ■■■■ 
+******************************************/
 char send_drive_command(int motL, int motR, int port_in)
 {
 	int byte=0;
@@ -196,16 +222,37 @@ char send_drive_command(int motL, int motR, int port_in)
 	serial *s=&rb_serial[port_in];
 
 	sbuf[0]=RB_DRIVE_PWM;//コマンド
+	// sbuf[0]=RB_DRIVE;//コマンド
 	set_drive_command(sbuf+1,motL,motR);
 	byte=5;
 	s->send(sbuf,byte);
+	return 1;
+}
 
-	// sprintf(buf1,"send_drive_command() rb[%d]sbuf[]=[%d:%d:%d:%d]\n",
-	// 	port_in,
-	// 	(unsigned char)sbuf[0],(unsigned char)sbuf[1],(unsigned char)sbuf[2],(unsigned char)sbuf[3]);
-		//printf(buf1);
-	// printf("%s",buf1);
-	//printf("abaaaaaa!");
+/****************************************
+ ■■■■                 ■■■   ■■■        ■■ 
+  ■   ■■               ■■    ■         ■■ 
+  ■    ■               ■■    ■         ■■ 
+  ■    ■■  ■■■■■        ■   ■    ■■■■  ■■ 
+  ■    ■■   ■  ■        ■■  ■   ■   ■  ■■ 
+  ■    ■■   ■           ■■  ■   ■   ■■ ■■ 
+  ■    ■■   ■            ■ ■    ■■■■■  ■■ 
+  ■    ■■   ■            ■■■    ■      ■■ 
+  ■   ■■   ■■            ■■■    ■■     ■■ 
+ ■■■■■■    ■■■            ■      ■■■■ ■■■■ 
+                ■■■■■■                   
+******************************************/
+char send_velocity_command(int motL, int motR, int port_in)
+{
+	int byte=0;
+	char *sbuf=roomba[port_in].sbuf;
+	serial *s=&rb_serial[port_in];
+
+	// sbuf[0]=RB_DRIVE_PWM;//コマンド
+	sbuf[0]=RB_DRIVE;//コマンド
+	set_drive_command(sbuf+1,motL,motR);
+	byte=5;
+	s->send(sbuf,byte);
 	return 1;
 }
 
@@ -453,84 +500,30 @@ return 1;
 }
 
 /***********************************************
-        Sensor初期化
-************************************************/
-char odo_init(int port_in)
-{
-    t_after = get_millisec();
-    t_diff = (t_after - t_before)/1000;
-    //t_after=get_millisec();
-
-    if(flag_serial_ready[port_in]!=1)return -1;//ポート準備ができていなければ処理しない．
-
-    serial *s=&rb_serial[port_in];
-    RoombaSensor *rss=&roomba[port_in].sensor;
-
-	s->purge();
-
-	encode_L_after = get_sensor_2B(43,port_in);
-	encode_R_after = get_sensor_2B(44,port_in);
-
-    encode_L_diff = encode_L_after - encode_L_before;
-    encode_R_diff = encode_R_after - encode_R_before;
-
-    // theta_L_diff = 2 * pi * double(encode_L_diff) / 508.8;
-    // theta_R_diff = 2 * pi * double(encode_R_diff) / 508.8;
-
-    // omega_L = theta_L_diff / t_diff;
-    // omega_R = theta_R_diff / t_diff;
-
-    // v_L = (tire_r/1000) * omega_L; //[m/s]左タイヤの回転速度
-    // v_R = (tire_r/1000) * omega_R; //[m/s]右タイヤの回転速度
-
-    // v_st_after = (v_L+v_R) / 2; //[m/s]並進速度
-
-    // omega_after =(v_R-v_L)/(tread/1000); //[rad/s]旋回角速度
-
-	// kyori = v_st_after * t_diff;
-
-	// theta_t_after = omega_after * t_diff;
-	// x_t = kyori * cos(theta_t_after) + x_t;
-	// y_t = kyori * sin(theta_t_after) + y_t;
-
-    // x_t = v_st_before * cos(theta_t_before) * t_diff + x_t; //xの距離
-    // y_t = v_st_before * sin(theta_t_before) * t_diff + y_t; //yの距離
-    // theta_t_after = omega_before * t_diff + theta_t_before; //ルンバ自体の回転
-
-	printf("\n");
-	printf("/-----------------/\n");
-	printf("/---odometori-----/\n");
-	printf("/-----------------/\n");
-	// printf("%d",t_before);
-	printf("encode_L_diff = %d [count] , encode_R_diff = %d [count] , t_diff = %.2f [s] ,t_after = %6.2f,\n",//.0f←小数点つき出力変換指定子
-       encode_L_diff , encode_R_diff , t_diff , t_after
-    );
-	printf("theta_L_diff = %.2f [rad] , theta_R_diff = %.2f [rad] , omega_L =%.2f [rad/s] , omega_R = %.2f [rad/s]\n",theta_L_diff , theta_R_diff , omega_L , omega_R);
-	printf("v_L = %.4f [m/s] , v_R = %.4f [m/s] , v_st_after = %.4f [m/s] , omega_after = %.4f [rad/s]\n" , v_L , v_R , v_st_after , omega_after);
-	printf("kyori = %.4f [m]\n" , kyori);
-	printf("theta_t_after = %.4f \n" , theta_t_after);
-	printf("x_t = %.4f [m] , y_t = %.4f [m] , theta_t_after = %.4f [rad]\n" , x_t , y_t , theta_t_after);
-	printf("\n");
-
-
-    t_before = t_after;
-    encode_L_before = encode_L_after;
-    encode_R_before = encode_R_after;
-    theta_t_before = theta_t_after;
-    omega_before = omega_after;
-    v_st_before = v_st_after;
-
-return 1;
-}
-
-/***********************************************
-        オドメトリ
+                ■■■                                                              
+                 ■■                                                              
+                 ■■                                        ■                     
+                 ■■                                        ■                     
+   ■■■■      ■■■ ■■     ■■■■    ■■■■■■■  ■■■■      ■■■■   ■■■■■ ■■■■■■ ■■■■  ■■■ 
+  ■   ■■    ■■  ■■■    ■   ■■    ■■   ■■■  ■■     ■   ■■   ■     ■■  ■  ■■    ■  
+ ■■    ■■  ■■    ■■   ■■    ■■   ■■   ■■    ■■   ■■    ■   ■     ■■     ■■    ■  
+ ■     ■■  ■■    ■■   ■     ■■   ■■    ■    ■■   ■     ■   ■     ■■      ■■  ■   
+ ■     ■■  ■     ■■   ■     ■■   ■■    ■    ■■   ■■■■■■■   ■     ■■      ■■  ■   
+ ■     ■■  ■■    ■■   ■     ■■   ■■    ■    ■■   ■         ■     ■■       ■  ■   
+ ■■    ■■  ■■    ■■   ■■    ■■   ■■    ■    ■■   ■■        ■     ■■       ■■■    
+  ■   ■■    ■■  ■■■    ■   ■■    ■■    ■    ■■    ■■  ■■   ■     ■■       ■■■    
+   ■■■■      ■■■ ■■■    ■■■■    ■■■■ ■■■■  ■■■■    ■■■■    ■■■  ■■■■       ■■    
+                                                                           ■     
+                                                                           ■     
+                                                                       ■■ ■      
+                                                                        ■■               
 ************************************************/
 char get_odo(int port_in)
 {
     t_after = get_millisec();
-    t_diff = (t_after - t_before)/1000;
-    //t_after=get_millisec();
+	if(!odo_mode){start_time = t_after;} //最初の時間を取得
+	
+	t_diff = (t_after - t_before)/1000;
 
     if(flag_serial_ready[port_in]!=1)return -1;//ポート準備ができていなければ処理しない．
 
@@ -560,29 +553,15 @@ char get_odo(int port_in)
 
 	kyori = v_st_after * t_diff;
 
-	theta_t_after = omega_after * t_diff + theta_t_after;
-	x_t = kyori * cos(theta_t_after) + x_t;
-	y_t = kyori * sin(theta_t_after) + y_t;
+	if(odo_mode){
+		theta_t_after = omega_after * t_diff + theta_t_after;
+		x_t = kyori * cos(theta_t_after) + x_t;
+		y_t = kyori * sin(theta_t_after) + y_t;
+	}
 
-    // x_t = v_st_before * cos(theta_t_before) * t_diff + x_t; //xの距離
-    // y_t = v_st_before * sin(theta_t_before) * t_diff + y_t; //yの距離
-    // theta_t_after = omega_before * t_diff + theta_t_before; //ルンバ自体の回転
-
-	printf("\n");
-	printf("/-----------------/\n");
-	printf("/---odometori-----/\n");
-	printf("/-----------------/\n");
-	// printf("%d",t_before);
-	printf("encode_L_diff = %d [count] , encode_R_diff = %d [count] , t_diff = %.2f [s] ,t_after = %6.2f,\n",//.0f←小数点つき出力変換指定子
-       encode_L_diff , encode_R_diff , t_diff , t_after
-    );
-	printf("theta_L_diff = %.2f [rad] , theta_R_diff = %.2f [rad] , omega_L =%.2f [rad/s] , omega_R = %.2f [rad/s]\n",theta_L_diff , theta_R_diff , omega_L , omega_R);
-	printf("v_L = %.4f [m/s] , v_R = %.4f [m/s] , v_st_after = %.4f [m/s] , omega_after = %.4f [rad/s]\n" , v_L , v_R , v_st_after , omega_after);
-	printf("kyori = %.4f [m]\n" , kyori);
-	printf("theta_t_after = %.4f \n" , theta_t_after);
+	printf("now_time = %.4f [m] " , (t_after - start_time)/1000);
 	printf("x_t = %.4f [m] , y_t = %.4f [m] , theta_t_after = %.4f [rad]\n" , x_t , y_t , theta_t_after);
-	printf("\n");
-
+	// printf("now_time = %d [ms] , start_time = %d [ms] \n" , now_time , start_time);
 
     t_before = t_after;
     encode_L_before = encode_L_after;
@@ -590,8 +569,9 @@ char get_odo(int port_in)
     theta_t_before = theta_t_after;
     omega_before = omega_after;
     v_st_before = v_st_after;
+	odo_mode = 1;
 
-return 1;
+	return 1;
 }
 
 
@@ -893,23 +873,80 @@ void keyf(unsigned char key , int x , int y)//一般キー入力
 
     }
 }
-//-----------------------
+
+/*****************************************************
+                            ■■                      
+                                          
+ ■■■■■■■  ■■■■     ■■■■    ■■■  ■■■ ■■■   
+  ■■   ■■■  ■■    ■■   ■    ■■   ■■   ■■  
+  ■■   ■■    ■■    ■   ■■   ■■   ■■    ■  
+  ■■    ■    ■■        ■■   ■■   ■■    ■  
+  ■■    ■    ■■    ■■■■■■   ■■   ■■    ■  
+  ■■    ■    ■■   ■■   ■■   ■■   ■■    ■  
+  ■■    ■    ■■   ■    ■■   ■■   ■■    ■  
+  ■■    ■    ■■   ■■   ■■   ■■   ■■    ■  
+ ■■■■ ■■■■  ■■■■   ■■■  ■■ ■■■■ ■■■■  ■■■ 
+************************************************/
 void key_input(void)
 {
     int key;
     int port=current_control_port;
+	int mode;
+	int speedL;
+	int speedR;
+	int velocity;
+	int radius;
+	RoombaSystem *rb=&roomba[port];
+	if((current_control_port==1)&&(flag_serial_ready[1]))port=1;
+    rb->flag_sensor_ready=1;
     send_command_one(RB_START, port);
-    send_command_one(RB_SAFE, port);
-    odo_init(port);
+    send_command_one(RB_FULL, port);
+    get_odo(port);
     while(1)
     {
-    printf("keyf() input: ");
-    key=getchar();
-    printf("[%c]\n",key);
-    keyf(key,0,0);
-	get_odo(port);
-	//get_odo(port);
+		
+		if(GetAsyncKeyState(0x57)) {
+			speedL = 120;
+			speedR = 120;
+			velocity = 500;
+			radius = 0;
+		}
+		else if(GetAsyncKeyState(0x41)) {
+			speedL=-120;
+			speedR=120;
+			velocity = 300;
+			radius = 20;
+		}
+		else if(GetAsyncKeyState(0x44)) {
+			speedL=120;
+			speedR=-120;
+			velocity = 300;
+			radius = -20;
+		}
+		else if(GetAsyncKeyState(0x53)) {
+			speedL=-120;
+			speedR=-120;
+			velocity = -500;
+			radius = 0;
+		}
+		else {
+			speedL=0;
+			speedR=0;
+			velocity = 0;
+			radius = 0;
+		}
+		sleep_msec(20);
 
+        send_drive_command(speedL,speedR,port);
+		// send_velocity_command(velocity,radius,port);
+
+		get_odo(port);
+
+    // printf("keyf() input: ");
+    // key=getchar();
+    // printf("[%c]\n",key);
+    // keyf(key,0,0);
+	// get_odo(port);
     }
 }
 
@@ -940,7 +977,6 @@ int id;
    	init();//変数初期化
 	sleep_msec(10);
 	mstime1=get_millisec();//時間計測開始
-	t_before=get_millisec();//時間計測開始
 
 	//キーボード割り当て表示
 	print_keys();
