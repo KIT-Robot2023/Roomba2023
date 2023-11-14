@@ -67,6 +67,16 @@ def GetBumps(ser):
     
     return BumpC
 
+def ValueCalculation(enc):
+    # タイヤ半径[mm]
+    r = 0.0036
+    # 移動距離計算
+    L_R = (2*math.pi*r)*(enc[0]/508.8)
+    L_L = (2*math.pi*r)*(enc[1]/508.8)
+    # 角度計算
+    Angle_R = (2*math.pi)*(enc[0]/508.8)
+    Angle_L = (2*math.pi)*(enc[1]/508.8)
+    # 角速度計算
 
 
 def main():
