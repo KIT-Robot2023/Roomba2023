@@ -86,10 +86,13 @@ def main():
 
     stop_flag=1
     
-    # エンコーダ値出力処理
+    start_time = time.time()
+    # 経過時間、エンコーダ値出力処理
     while True:
+        now_time = time.time() - start_time
+        now_time = round(now_time, 3)  # 有効数字3桁に丸める(値が小さすぎると見にくいため)
         el,er = GetEncs(ser)
-        print("Enc L:"+str(el)+" R:"+str(er))
+        print(f"Time[{now_time}], Enc[L: {el} R: {er}]")
         time.sleep(0.1)
 
 main()
