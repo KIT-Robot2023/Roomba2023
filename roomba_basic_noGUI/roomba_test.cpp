@@ -14,7 +14,7 @@ double mstime2=0;
 //--------------
 //☆☆☆☆☆☆☆シリアルポート設定☆☆☆☆☆☆☆☆
 //#define SERIAL_PORT_1 "/dev/ttyS16"
-#define SERIAL_PORT_1 "\\\\.\\COM6"
+#define SERIAL_PORT_1 "\\\\.\\COM3"
 //--------------
 
 char buf1[1024];
@@ -426,6 +426,38 @@ void print_sensors(int port_in)
 
 	return;
 }
+
+//--------------------------
+char get_Encsensors(int port_in, int *EncL, int *EncR) {
+    if (flag_serial_ready[port_in] != 1) return -1;
+
+    serial *s = &rb_serial[port_in];
+    RoombaSensor *rss = &roomba[port_in].sensor;
+
+    s->purge();
+
+    *EncL = get_sensor_2B(43, port_in); // EncLをポインタを介して設定
+    *EncR = get_sensor_2B(44, port_in); // EncRをポインタを介して設定
+
+    // 他のセンサー値の取得
+
+    mstime2 = get_millisec();
+    rss->TimeNow = mstime2 - mstime1; // 現在時刻 201101 clock_gettime()使用
+
+    if(flag_serial_ready[port_in]!=1)
+    {
+        //ポート準備ができていない場合
+        printf("print_sensors() serial port is not ready.\n");
+        return;
+    }
+
+    printf("\encL=%d,\encR=%d,\Time=%.0f,\\n",rss->EncL,rss->EncR,rss->TimeNow);
+    return 1;
+}
+
+//--------------------------
+
+
 //--------------------------
 //-------------------------------------
 void drive_tires(int dir_in)
@@ -568,6 +600,22 @@ void keyf(unsigned char key , int x , int y)//一般キー入力
     	    rb->flag_sensor_ready=1;
     		get_sensors(port);//read sensors
     		print_sensors(port);
+    		break;
+    	}
+        case '4':
+    	{
+    	    //clock_t start_clock, end_clock;
+    	    //start_clock = clock();
+    	    //end_clock = clock();
+            //encL_prev=rss->EncL;
+            //encR_prev=rss->EncR;
+            //printf("EncL=%d EncR=%d",encL_prev,encR_prev);
+    		while(1){
+                //key=getchar();
+                //keyf(key,0,0);
+                sleep(1);
+                //printf("clock:%f\n", (double)(end_clock - start_clock) / CLOCKS_PER_SEC);
+    		}
     		break;
     	}
     	case 'x':
