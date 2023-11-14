@@ -86,74 +86,10 @@ def main():
 
     stop_flag=1
     
+    # エンコーダ値出力処理
     while True:
-        val=input('Input command char: ')
-        #print("Input val="+val)
-        speed=70
-        speed_rot=50
-        if stop_flag != 1:
-            print("STOP MOTOR")
-            stop_flag = 1
-            DrivePWM(ser, 0,0)
-        elif val=='0':
-            print("ROT-R(0)")
-            stop_flag = 0
-            DrivePWM(ser, speed_rot,-speed_rot)
-        elif val=='2':
-            print("ROT-L(2)")
-            stop_flag = 0
-            DrivePWM(ser, -speed_rot,speed_rot)
-        elif val=='1':
-            print("FWR(1)")
-            stop_flag = 0
-            DrivePWM(ser, speed,speed)
-        elif val=='3':
-            print("BACK(3)")
-            stop_flag = 0
-            DrivePWM(ser, -speed,-speed)
-        elif val=='d':
-            print("RESET")
-            stop_flag = 1
-            ser.write(RB_RESET)
-            str1 = ser.read(234)
-            print(str1)
-        elif val=='a':
-            print("START")
-            stop_flag = 1
-            oimode1 = GetOIMode(ser)
-            ser.write(RB_START)
-            oimode2 = GetOIMode(ser)
-            print("OIMode:"+str(oimode1)+"->"+str(oimode2))
-        elif val=='g':
-            print("SAFE")
-            stop_flag = 1
-            oimode1 = GetOIMode(ser)
-            ser.write(RB_SAFE)
-            oimode2 = GetOIMode(ser)
-            print("OIMode:"+str(oimode1)+"->"+str(oimode2))
-        elif val=='f':
-            print("FULL")
-            stop_flag = 1
-            oimode1 = GetOIMode(ser)
-            ser.write(RB_FULL)
-            oimode2 = GetOIMode(ser)
-            print("OIMode:"+str(oimode1)+"->"+str(oimode2))
-        elif val=='w':
-            print("DOCK")
-            ser.write(RB_SEEK_DOCK)
-        elif val=='z':
-            print("SENSOR")
-            el,er = GetEncs(ser)
-            oimode = GetOIMode(ser)
-            vol = GetSensor(ser, RB_VOLTAGE, 2, False)
-            cur = GetSensor(ser, RB_CURRENT, 2, False)
-            
-            print("Enc L:"+str(el)+" R:"+str(er))
-            print("OIMode:"+str(oimode))
-            print("Votage/Current ="+str(vol)+"[mV]/"+str(cur)+"[mA]")
-
-        else:
-            print("Input val="+val)
-            
+        el,er = GetEncs(ser)
+        print("Enc L:"+str(el)+" R:"+str(er))
+        time.sleep(0.1)
 
 main()
