@@ -76,7 +76,8 @@ def odometry(ser, time_before, encoder_before, theta_now, x, y):
     time_now = time.time()
     time_difference = (time_now - time_before)/1000
 
-    encoder_now = float(np.array(GetEncs(ser)))     #left encoder value is 0th. right encoder value is 1st.
+    left, right = GetEncs(ser)
+    encoder_now = np.array([float(left), float(right)])     #left encoder value is 0th. right encoder value is 1st.
     encoder_difference = encoder_now - encoder_before
     theta_enc_difference = (2 * math.pi  / 508.8) * encoder_difference
     omega = theta_enc_difference / time_difference
@@ -90,7 +91,7 @@ def odometry(ser, time_before, encoder_before, theta_now, x, y):
     theta_now += omega_now * time_difference
     x += distance * math.cos(theta_now)
     y += distance * math.sin(theta_now)
-    return encoder_difference, theta_enc_difference, omega, velocity, velocity_st_now, omega_now, distance, theta_now, x, y, time_difference
+    return time_now, encoder_now, theta_now, omega_now, velocity_st_now, x, y
 
 
 def main():
@@ -103,9 +104,9 @@ def main():
     RB_SEEK_DOCK  = bytes([143]) #//ドックを探す
     RB_RATE = 115200
 
-    time_before = 0
+    time_before = time.time()
     encoder_before = 0
-    theta_now = 0   #Roomba angle
+    theta_before = 0   #Roomba angle
     x = 0   #Roomba x coordinate
     y = 0   #Roomba y coordinate
     
@@ -115,7 +116,7 @@ def main():
     ser = serial.Serial(RB_PORT, RB_RATE, timeout=10)
 
     stop_flag=1
-    
+    odometry(ser, time_before, encoder_before, theta_before, x, y)
     while True:
         val=input('Input command char: ')
         #print("Input val="+val)
@@ -136,11 +137,55 @@ def main():
         elif val=='1':
             print("FWR(1)")
             stop_flag = 0
+            time_now, encoder_now, theta_now, omega_now, velocity_st_now, x_now, y_now = odometry(ser, time_before, encoder_before, theta_before, x, y)
+            print("\n")
+            print("odometry")
+            print(f"Roomba speed is {velocity_st_now}[m/s]. Roomba rotation angular velocity is {omega_now}[rad/s]")
+            print(f"Roomba angle is {theta_now}")
+            print(f"current Roomba coordinates is ({x_now},{y_now})")
+            time_before = time_now
+            encoder_before = encoder_now
+            theta_before = theta_now
+            x = x_now
+            y = y_now
             DrivePWM(ser, speed,speed)
+            time_now, encoder_now, theta_now, omega_now, velocity_st_now, x_now, y_now = odometry(ser, time_before, encoder_before, theta_before, x, y)
+            print("\n")
+            print("odometry")
+            print(f"Roomba speed is {velocity_st_now}[m/s]. Roomba rotation angular velocity is {omega_now}[rad/s]")
+            print(f"Roomba angle is {theta_now}")
+            print(f"current Roomba coordinates is ({x_now},{y_now})")
+            time_before = time_now
+            encoder_before = encoder_now
+            theta_before = theta_now
+            x = x_now
+            y = y_now
         elif val=='3':
             print("BACK(3)")
             stop_flag = 0
+            time_now, encoder_now, theta_now, omega_now, velocity_st_now, x_now, y_now = odometry(ser, time_before, encoder_before, theta_before, x, y)
+            print("\n")
+            print("odometry")
+            print(f"Roomba speed is {velocity_st_now}[m/s]. Roomba rotation angular velocity is {omega_now}[rad/s]")
+            print(f"Roomba angle is {theta_now}")
+            print(f"current Roomba coordinates is ({x_now},{y_now})")
+            time_before = time_now
+            encoder_before = encoder_now
+            theta_before = theta_now
+            x = x_now
+            y = y_now
             DrivePWM(ser, -speed,-speed)
+            time_now, encoder_now, theta_now, omega_now, velocity_st_now, x_now, y_now = odometry(ser, time_before, encoder_before, theta_before, x, y)
+            print("\n")
+            print("odometry")
+            print(f"Roomba speed is {velocity_st_now}[m/s]. Roomba rotation angular velocity is {omega_now}[rad/s]")
+            print(f"Roomba angle is {theta_now}")
+            print(f"current Roomba coordinates is ({x_now},{y_now})")
+            time_before = time_now
+            encoder_before = encoder_now
+            theta_before = theta_now
+            x = x_now
+            y = y_now
         elif val=='d':
             print("RESET")
             stop_flag = 1
@@ -171,18 +216,17 @@ def main():
         elif val == "o":
             print("odometry")
             stop_flag = 1
-            encoder_difference, theta_enc_difference, omega, velocity, velocity_st_now, omega_now, distance, theta_now, x, y, time_difference = odometry(ser, time_before, encoder_before, theta_now, x, y)
+            time_now, encoder_now, theta_now, omega_now, velocity_st_now, x_now, y_now = odometry(ser, time_before, encoder_before, theta_before, x, y)
             print("\n")
             print("odometry")
-            print(f"left encoder difference is {encoder_difference[0]}[count]. right encoder difference is {encoder_difference[1]}[count].")
-            print(f"left tire angle is {theta_enc_difference[0]}[rad]. right tire angle is {theta_enc_difference[1]}[rad].")
-            print(f"angular velocity of left tire is {omega[0]}[rad/s]. angular velocity of right tire is {omega[1]}[rad/s].")
-            print(f"left tire speed is {velocity[0]}[m/s]. right tire speed is {velocity[1]}[m/s].")
             print(f"Roomba speed is {velocity_st_now}[m/s]. Roomba rotation angular velocity is {omega_now}[rad/s]")
-            print(f"Roomba travel distance {distance}")
             print(f"Roomba angle is {theta_now}")
-            print(f"current Roomba coordinates is ({x},{y})")
-            print(f"{time_difference} seconds have passed") 
+            print(f"current Roomba coordinates is ({x_now},{y_now})")
+            time_before = time_now
+            encoder_before = encoder_now
+            theta_before = theta_now
+            x = x_now
+            y = y_now
         elif val=='w':
             print("DOCK")
             ser.write(RB_SEEK_DOCK)
@@ -199,6 +243,12 @@ def main():
 
         else:
             print("Input val="+val)
-            
 
+        time_now, encoder_now, theta_now, omega_now, velocity_st_now, x_now, y_now = odometry(ser, time_before, encoder_before, theta_before, x, y)
+        time_before = time_now
+        encoder_before = encoder_now
+        theta_before = theta_now
+        x = x_now
+        y = y_now
+            
 main()
