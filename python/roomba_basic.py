@@ -9,7 +9,7 @@ import serial
 import matplotlib as plt
 
 ################################################
-RB_PORT = "COM4"#シリアルポート設定
+RB_PORT = "COM3"#シリアルポート設定
 ################################################
 
 '''ルンバ実機の長さなどの値'''
@@ -526,7 +526,7 @@ def main():
 
         elif val=='all':  #組み合わせ
             print("Odometry test mode ON!")
-            ser.write(bytes([140, 0, 4, 60, 8, 62, 8, 64, 8, 66, 8]))  # オドメトリモード起動音セット　　60と62はノート番号、32は持続時間 つまり，bytesを使えば簡単にシリアルデータを送信できるぞ
+            ser.write(bytes([140, 0, 4, 60,8, 62,8, 64,8, 66,8]))  # オドメトリモード起動音セット　　60と62はノート番号、32は持続時間 つまり，bytesを使えば簡単にシリアルデータを送信できるぞ
             # ここで，140はモード，0は曲の番号（０番目の曲に音をセットする），音を出す数は２音，６０の音を32という時間だけ流す，６２という音を３２という時間だけ流す
             play_song(ser, 0) #オドメトリ起動音再生
             time.sleep(2)  # 2秒待つ
@@ -536,23 +536,21 @@ def main():
             Roomba_xpos = 0
             Roomba_ypos = 0
 
-            #モータを動かす．（まずは直進させてみる）
-            print("Go_Straight！！")
-            stop_flag = 0
+
             # まずは最初のエンコーダ値取得，そして開始時間も取得
             # print("get encoder value...")
             encL_prev, encR_prev = GetEncs(ser) # 左右のエンコーダの値取得
             t_prev = time.time() # プログラムの実行開始時刻を取得 time.time()は，システムが起動してから何秒経ったかを取得してくれる関数　よってこれを引き算することで経過時間（秒）を得られる
-            print("最初のエンコーダの値は:左が"+str(encL_prev)+"で，右が"+str(encL_prev)+"です．時間も取得しました")
+            print("最初のエンコーダの値は:左が"+str(encL_prev)+"で，右が"+str(encL_prev)+"です．時間も取得しました 変数準備完了")
+
 
             start_time = time.time()
-            while time.time() - start_time < 3:  # 現在の時刻と開始時刻の差が5秒未満の間 つまり5秒間ループ処理
+            while time.time() - start_time < 1:  # 現在の時刻と開始時刻の差が5秒未満の間 つまり5秒間ループ処理
                 #モータを動かす．（まずは直進させてみる）
                 print("Go_Straight！！")
                 stop_flag = 0
-                DrivePWM(ser, 100,100)
-                time.sleep(1.5) # 1.5秒直進
-
+                DrivePWM(ser, 70,70)
+    
                 encL, encR = GetEncs(ser) # 左右のエンコーダの値再び取得
                 now_time = time.time() # 現在の時刻を取得
 
@@ -606,8 +604,13 @@ def main():
                 encR_prev = encR
                 t_prev = now_time
 
-                DrivePWM(ser, 100,-100)
-                time.sleep(0.5) # 0.2秒旋回
+            start_time = time.time()
+            while time.time() - start_time < 1:  # 現在の時刻と開始時刻の差が5秒未満の間 つまり5秒間ループ処理
+                #モータを動かす．（まずは直進させてみる）
+                print("Go_Straight！！")
+                stop_flag = 0
+                DrivePWM(ser, -70,70)
+    
                 encL, encR = GetEncs(ser) # 左右のエンコーダの値再び取得
                 now_time = time.time() # 現在の時刻を取得
 
@@ -661,10 +664,13 @@ def main():
                 encR_prev = encR
                 t_prev = now_time
 
-
-                DrivePWM(ser, 100,100)
-                time.sleep(1.5) # 1.5秒直進
- 
+            start_time = time.time()
+            while time.time() - start_time < 1:  # 現在の時刻と開始時刻の差が5秒未満の間 つまり5秒間ループ処理
+                #モータを動かす．（まずは直進させてみる）
+                print("Go_Straight！！")
+                stop_flag = 0
+                DrivePWM(ser, 70,70)
+    
                 encL, encR = GetEncs(ser) # 左右のエンコーダの値再び取得
                 now_time = time.time() # 現在の時刻を取得
 
@@ -712,6 +718,7 @@ def main():
 
                 print("ルンバのｘ座標：" + str(Roomba_xpos))
                 print("ルンバのｙ座標：" + str(Roomba_ypos))
+
 
                 encL_prev = encL
                 encR_prev = encR
