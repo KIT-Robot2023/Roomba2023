@@ -1,3 +1,4 @@
+#pragma once
 #include <chrono>
 
 #include "roomba_command.hpp"
@@ -5,11 +6,14 @@
 
 namespace diff2_odometry {
 struct Diff2OdometryConfig {
-    Diff2OdometryConfig(const int encoder_count_per_revolution, const double wheel_radius, const double wheel_tread)
+    Diff2OdometryConfig(const int encoder_count_per_revolution, const int encoder_count_range,
+                        const double wheel_radius, const double wheel_tread)
         : encoder_count_per_revolution(encoder_count_per_revolution),
+          encoder_count_range(encoder_count_range),
           wheel_radius(wheel_radius),
           wheel_tread(wheel_tread){};
     const int encoder_count_per_revolution;
+    const int encoder_count_range;
     const double wheel_radius;
     const double wheel_tread;
 };
@@ -29,7 +33,12 @@ public:
         prev_right_count_ = 0;
     };
     void cycle();
-    const Diff2OdometryState &state() { return state_; };
+    const Diff2OdometryState &state() const { return state_; };
+    double x() { return state_.x; };
+    double y() { return state_.y; };
+    double theta() { return state_.theta; }
+    double v() { return state_.v; };
+    double w() { return state_.w; };
 
 private:
     roomba::Command &command_;
@@ -45,5 +54,12 @@ private:
         return 2.0 * util::pi_d * count / config_.encoder_count_per_revolution;
     };
     double omega_to_vel_(const double omega) { return omega * config_.wheel_radius; };
+    int delta_count_(int dt_count) {
+        if (abs(dt_count) >= config_.encoder_count_range / 2) {
+            return util::sign(dt_count) * config_.encoder_count_range - dt_count;
+        } else {
+            return dt_count;
+        }
+    };
 };
 }  // namespace diff2_odometry
