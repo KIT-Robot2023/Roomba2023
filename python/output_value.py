@@ -67,7 +67,13 @@ def GetBumps(ser):
     
     return BumpC
 
-def ValueCalculation(enc):
+Angle_R_before = 0.0
+Angle_L_before = 0.0
+t_before = 0.0
+# 引数：エンコーダ値, 時間
+def ValueCalculation(enc, t):
+    #1時刻前の値
+    global Angle_R_before, Angle_L_before, t_before
     # タイヤ半径[mm]
     r = 0.0036
     # 移動距離計算
@@ -77,7 +83,17 @@ def ValueCalculation(enc):
     Angle_R = (2*math.pi)*(enc[0]/508.8)
     Angle_L = (2*math.pi)*(enc[1]/508.8)
     # 角速度計算
+    w_L = (Angle_L - Angle_L_before)/(t - t_before)
+    w_R = (Angle_R - Angle_R_before)/(t - t_before)
+    # 速度計算
+    v_L = r * w_L
+    v_R = r * w_R
+    # 計算の為に値を変数に保存
+    Angle_R_before = Angle_R
+    Angle_L_before = Angle_L
+    t_before = t
 
+    return [v_L, v_R]
 
 def main():
     '''シリアル通信用変数'''
@@ -93,16 +109,22 @@ def main():
     #print("Start Serial Communication")
     '''シリアル通信開始'''
     ser = serial.Serial(RB_PORT, RB_RATE, timeout=10)
-
     stop_flag=1
     
+    T = 235.0  # 車輪間隔
     start_time = time.time()
     # 経過時間、エンコーダ値出力処理
     while True:
+        time.sleep(0.05)
         now_time = time.time() - start_time
         now_time = round(now_time, 3)  # 有効数字3桁に丸める(値が小さすぎると見にくいため)
+        # エンコーダの値取得
         el,er = GetEncs(ser)
+        # 速度計算
+        v_list = ValueCalculation([el, er], now_time)
+        # 値出力
         print(f"Time[{now_time}], Enc[L: {el} R: {er}]")
-        time.sleep(0.1)
+        print(f"Velocity[L: {v_list[0]}  R: {v_list[1]}]")
+        print(f"Anglar_v[{(v_list[0] - v_list[1])/T}]")
 
 main()
