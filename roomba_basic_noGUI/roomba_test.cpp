@@ -21,9 +21,11 @@
 #include "Sensor.hpp"
 #include "numkeyCtrl.hpp"
 
-int ctrl_time = 1;
+int key_input_time = 1;
+int ctrl_time = 10;
 int update_time = 100;
 
+Timer key_input_timer(key_input_time,true);
 Timer ctrl_timer(ctrl_time, true);
 Timer data_timer(update_time, true);
 
@@ -40,6 +42,9 @@ void key_input(void)
 	int key;
 	int port = current_control_port;
 	int flag = 1;
+	int arg1 = 0;
+	int arg2 = 0;
+
 	while (flag)
 	{
 		sleep_msec(100);
@@ -53,7 +58,7 @@ void key_input(void)
 		}
 
 		printf("keyf() input: ");
-		if (ctrl_timer())
+		if (key_input_timer())
 		{
 			if (_kbhit())
 			{
@@ -61,26 +66,34 @@ void key_input(void)
 				switch (key)
 				{
 				case 'w':
-					send_drive_command(200, 200, port);
+					arg1 = 200;
+					arg2 = 200;
 					break;
 				case 'a':
-					send_drive_command(-200, 200, port);
+					arg1 = -200;
+					arg2 = 200;
 					break;
 				case 's':
-					send_drive_command(-200, -200, port);
+					arg1 = -200;
+					arg2 = -200;
 					break;
 				case 'd':
-					send_drive_command(200, -200, port);
+					arg1 = 200;
+					arg2 = -200;
 					break;
 				default:
+					arg1 = 0;
+					arg2 = 0;
 					break;
 				}
 			}
 			else
 			{
-				send_drive_command(0, 0, port);
+					arg1 = 0;
+					arg2 = 0;
 			}
 		}
+		if(ctrl_timer()){send_drive_command(arg1, arg2, port);}
 
 		// printf("[%c\n]", key);
 		// if (key != '\n')
