@@ -69,11 +69,10 @@ def GetBumps(ser):
 
 Angle_R_before = 0.0
 Angle_L_before = 0.0
-t_before = 0.0
 # 引数：エンコーダ値, 時間
-def ValueCalculation(enc, t):
+def EncVelCalculation(enc, t):
     #1時刻前の値
-    global Angle_R_before, Angle_L_before, t_before
+    global Angle_R_before, Angle_L_before, delta_t
     # タイヤ半径[mm]
     r = 0.0036
     # 移動距離計算
@@ -83,18 +82,25 @@ def ValueCalculation(enc, t):
     Angle_R = (2*math.pi)*(enc[0]/508.8)
     Angle_L = (2*math.pi)*(enc[1]/508.8)
     # 角速度計算
-    w_L = (Angle_L - Angle_L_before)/(t - t_before)
-    w_R = (Angle_R - Angle_R_before)/(t - t_before)
+    w_L = (Angle_L - Angle_L_before) / delta_t
+    w_R = (Angle_R - Angle_R_before) / delta_t
     # 速度計算
     v_L = r * w_L
     v_R = r * w_R
     # 計算の為に値を変数に保存
     Angle_R_before = Angle_R
     Angle_L_before = Angle_L
-    t_before = t
-
     return [v_L, v_R]
 
+def LocationCalculation(anglar_vel, anglarBefore_vel):
+    global delta_t, anglar_vel0
+    # 現在の角度を算出（角速度の積分）
+    anglar += anglarBefore_vel*delta_t + anglarBefore_vel
+    # 現在のx座標を算出（x軸方向の速度の積分）
+    # 現在のy座標を算出（y軸方向の速度の積分）
+
+
+delta_t = 0.0
 def main():
     '''シリアル通信用変数'''
     RB_START = bytes([128])
@@ -111,6 +117,8 @@ def main():
     ser = serial.Serial(RB_PORT, RB_RATE, timeout=10)
     stop_flag=1
     
+    global delta_t,   # 微小時間
+    before_t = 0.0  # 1時刻前の時間
     T = 235.0  # 車輪間隔
     start_time = time.time()
     # 経過時間、エンコーダ値出力処理
@@ -118,13 +126,20 @@ def main():
         time.sleep(0.05)
         now_time = time.time() - start_time
         now_time = round(now_time, 3)  # 有効数字3桁に丸める(値が小さすぎると見にくいため)
+        # 微小時間の計算
+        delta_t = now_time - before_t
         # エンコーダの値取得
         el,er = GetEncs(ser)
-        # 速度計算
-        v_list = ValueCalculation([el, er], now_time)
+        # エンコーダ速度計算
+        enc_vel_list = EncVelCalculation([el, er], now_time)
+        # 回転角速度計算
+        anglar_vel = (enc_vel_list[0] - enc_vel_list[1])/T
+        # ロボットの座標計算
+        #robot_coordinate = LocationCalculation(anglar_vel)
         # 値出力
         print(f"Time[{now_time}], Enc[L: {el} R: {er}]")
-        print(f"Velocity[L: {v_list[0]}  R: {v_list[1]}]")
-        print(f"Anglar_v[{(v_list[0] - v_list[1])/T}]")
+        print(f"Enc_vel[L: {enc_vel_list[0]}  R: {enc_vel_list[1]}]")
+        print(f"Anglar_vel[{anglar_vel}]\n")
+        before_t = now_time
 
 main()
