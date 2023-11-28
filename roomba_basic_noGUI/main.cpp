@@ -1,5 +1,3 @@
-#include <limits.h>
-
 #include <climits>
 #include <cstdio>
 #include <fstream>
@@ -12,6 +10,8 @@
 #include "include/roomba_command.hpp"
 #include "include/roomba_open_interface.hpp"
 #include "include/timer.hpp"
+
+#define VERTIAL
 
 using std::chrono::duration_cast;
 using std::chrono::milliseconds;
@@ -43,8 +43,13 @@ int main() {
     serial serial;
     roomba::Command roomba_command(serial, "\\\\.\\COM13");
     diff2_odometry::Diff2OdometryConfig odo_config(508, USHRT_MAX, 0.036, 0.235);
+#ifdef VERTIAL
+    diff2_odometry::VertialDiff2Odometry odometry(odo_config);
+    roomba::VertialRoomba roomba(odometry);
+#else
     diff2_odometry::Diff2Odometry odometry(roomba_command, odo_config);
     roomba::Roomba roomba(roomba_command, odometry);
+#endif
     roomba.init();
 
     while (true) {
@@ -74,7 +79,7 @@ int main() {
             oss << std::fixed << std::setprecision(8)
                 << duration_cast<milliseconds>(steady_clock::now() - system_start_time).count() << "," << roomba.odo().x
                 << "," << roomba.odo().y << "," << roomba.odo().theta << "," << roomba.odo().v << "," << roomba.odo().w
-                << "," << roomba_command.get_encoder_left() << "," << roomba_command.get_encoder_right() << std::endl;
+                << "," << odometry.encoder_left() << "," << odometry.encoder_right() << std::endl;
             log_file << oss.str();
             // std::cout << oss.str();
         }
