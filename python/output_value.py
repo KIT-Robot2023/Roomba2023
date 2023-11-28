@@ -73,7 +73,7 @@ Angle_L_before = 0.0
 def EncVelCalculation(enc, t):
     #1時刻前の値
     global Angle_R_before, Angle_L_before, delta_t
-    # タイヤ半径[mm]
+    # タイヤ半径[m]
     r = 0.0036
     # 移動距離計算
     L_R = (2*math.pi*r)*(enc[0]/508.8)
@@ -92,19 +92,44 @@ def EncVelCalculation(enc, t):
     Angle_L_before = Angle_L
     return [v_L, v_R]
 
-def LocationCalculation(anglar_vel, anglarBefore_vel):
-    global delta_t, anglar_vel0
+def LocationCalculation():
+    global delta_t, angular_vel, angle, vel, before_angular_vel, before_angle, before_vel, x, before_x, y, before_y
+
     # 現在の角度を算出（角速度の積分）
-    anglar += anglarBefore_vel*delta_t + anglarBefore_vel
+    print(vel, before_vel)
+    angle = before_angular_vel*delta_t + before_angle
     # 現在のx座標を算出（x軸方向の速度の積分）
+    x = before_vel*math.cos(angle)*delta_t + before_x
+    y = before_vel*math.sin(angle)*delta_t + before_y
     # 現在のy座標を算出（y軸方向の速度の積分）
+    
+    before_angular_vel = angular_vel
+    before_angle = angle
+    before_x = x
+    before_y = y
+    before_vel = vel
+    
+    return math.degrees(angle), round(x, 3), y
 
 
 delta_t = 0.0
+angular_vel = 0.0
+angle = 0.0
+vel = 0.0
+x = 0.0
+y = 0.0
+before_angular_vel = 0.0
+before_angle = 0.0
+before_vel = 0.0
+before_x = 0.0
+before_y = 0.0
+
 def main():
+    global delta_t, angular_vel, vel   # 微小時間
     '''シリアル通信用変数'''
     RB_START = bytes([128])
     RB_RESET = bytes([7])
+
     RB_STOP  = bytes([173])
     RB_SAFE  = bytes([131])
     RB_FULL  = bytes([132])
@@ -117,11 +142,11 @@ def main():
     ser = serial.Serial(RB_PORT, RB_RATE, timeout=10)
     stop_flag=1
     
-    global delta_t,   # 微小時間
     before_t = 0.0  # 1時刻前の時間
-    T = 235.0  # 車輪間隔
+    T = 0.235  # 車輪間隔
     start_time = time.time()
     # 経過時間、エンコーダ値出力処理
+    before_x = 0.0
     while True:
         time.sleep(0.05)
         now_time = time.time() - start_time
@@ -132,14 +157,18 @@ def main():
         el,er = GetEncs(ser)
         # エンコーダ速度計算
         enc_vel_list = EncVelCalculation([el, er], now_time)
+        # 並進速度計算
+        vel = sum(enc_vel_list)/2
         # 回転角速度計算
-        anglar_vel = (enc_vel_list[0] - enc_vel_list[1])/T
+        angular_vel = (enc_vel_list[0] - enc_vel_list[1])/T
         # ロボットの座標計算
-        #robot_coordinate = LocationCalculation(anglar_vel)
+        angle, x, y = LocationCalculation()
         # 値出力
         print(f"Time[{now_time}], Enc[L: {el} R: {er}]")
         print(f"Enc_vel[L: {enc_vel_list[0]}  R: {enc_vel_list[1]}]")
-        print(f"Anglar_vel[{anglar_vel}]\n")
+        print(f"Liner_vel[{vel}]")
+        print(f"Anglar_vel[{angular_vel}]")
+        print(f"Angle, x, y: {math.degrees(angle)}, {x}, {y}\n")
         before_t = now_time
 
 main()
