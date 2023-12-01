@@ -21,6 +21,7 @@
 #include "Sensor.hpp"
 #include "numkeyCtrl.hpp"
 
+int base_pwm = 50;
 int key_input_time = 1;
 int ctrl_time = 10;
 int update_time = 100;
@@ -66,20 +67,20 @@ void key_input(void)
 				switch (key)
 				{
 				case 'w':
-					arg1 = 200;
-					arg2 = 200;
+					arg1 = base_pwm;
+					arg2 = base_pwm;
 					break;
 				case 'a':
-					arg1 = -200;
-					arg2 = 200;
+					arg1 = -base_pwm;
+					arg2 = base_pwm;
 					break;
 				case 's':
-					arg1 = -200;
-					arg2 = -200;
+					arg1 = -base_pwm;
+					arg2 = -base_pwm;
 					break;
 				case 'd':
-					arg1 = 200;
-					arg2 = -200;
+					arg1 = base_pwm;
+					arg2 = -base_pwm;
 					break;
 				default:
 					arg1 = 0;
