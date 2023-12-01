@@ -27,7 +27,7 @@
 #endif
 
 #include <stdio.h>
-#include "serial.h"
+#include "include/serial.h"
 
 #ifdef LINUX
   int fd, res;

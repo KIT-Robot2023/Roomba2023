@@ -4,6 +4,8 @@
 #include "roomba_types.h"
 #include "roomba_cmd.h"
 #include "init.hpp"
+#include "receive.hpp"
+#include "Sensor.hpp"
 
 void drive_tires(int dir_in)
 {

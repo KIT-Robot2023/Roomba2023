@@ -1,3 +1,5 @@
+#pragma once
+
 #include "sending_command.hpp"
 #include "serial.h"
 #include "roomba_cmd.h"

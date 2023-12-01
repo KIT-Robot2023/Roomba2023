@@ -1,4 +1,6 @@
 // あ　UTF-8エンコード
+#pragma once
+
 #include <stdio.h>
 #include "serial.h"
 #include "roomba_types.h"

@@ -8,18 +8,18 @@
 #include <conio.h>
 // #include <unistd.h>//usleep用
 
-#include "serial.h"
-#include "roomba_cmd.h"
-#include "roomba_types.h"
-#include "Roomba_Odometry.h"
+#include "include/serial.h"
+#include "include/roomba_cmd.h"
+#include "include/roomba_types.h"
+#include "include/Roomba_Odometry.h"
 
-#include "init.hpp"
-#include "sending_command.hpp"
-#include "time.hpp"
-#include "timer.hpp"
-#include "receive.hpp"
-#include "Sensor.hpp"
-#include "numkeyCtrl.hpp"
+#include "include/init.hpp"
+#include "include/sending_command.hpp"
+#include "include/time.hpp"
+#include "include/timer.hpp"
+#include "include/receive.hpp"
+#include "include/Sensor.hpp"
+#include "include/numkeyCtrl.hpp"
 
 int base_pwm = 50;
 int key_input_time = 1;
@@ -143,8 +143,6 @@ int main(int argc, char **argv)
 	ini_Enc_R = roomba[port].sensor.EncR;
 	RoombaSensor *rss = &roomba[port].sensor;
 	Od.get_odometry(roomba[port].sensor.TimeNow, rss->EncL - ini_Enc_L, rss->EncR - ini_Enc_R);
-	// printf("ini_Enc:");
-	// printf("%d,%d",ini_Enc_L,ini_Enc_R);
 
 	// キーボード入力受付
 	key_input(); // for NoGUI
