@@ -241,6 +241,12 @@ def main():
                 mode[1] = 70
                 mode[2] = 77
                 DrivePWM(ser, mode[1], mode[2])
+                
+################ test #######################################
+                time.sleep(1)
+                mode[1] = 0
+                mode[2] = 0
+                DrivePWM(ser, mode[1], mode[2])
 
             elif val == '2':
                 DrivePWM(ser, -mode[1], -mode[2])

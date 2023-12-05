@@ -1,10 +1,13 @@
-load("Result/straight1_70_77.mat")
+close all
+
+load("Result/straight2_70_77.mat")
 makedata
 figure(1)
 plot(pwmx, pwmy, LineWidth=1.5)
 hold on
 plot(r_pwmx, r_pwmy, "r--", LineWidth=1.5)
 axis([0,1.5,-0.5,0.5])
+pbaspect([3 2 1])
 xlabel("x [m]")
 ylabel("y [m]")
 legend("オドメトリ", "実測値")
@@ -92,3 +95,5 @@ makedata
 plot(pwmx, pwmy, LineWidth=1.5)
 plot(r_pwmx, r_pwmy, LineWidth=1.5, LineStyle="--")
 legend("オドメトリ", "実測値", "オドメトリ", "実測値")
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
