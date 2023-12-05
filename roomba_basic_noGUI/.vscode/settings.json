@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "cstddef": "cpp"
+        "cstddef": "cpp",
+        "cmath": "cpp",
+        "ios": "cpp"
     }
 }

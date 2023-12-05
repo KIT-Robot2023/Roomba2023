@@ -13,7 +13,6 @@
 double mstime1=0;//msec単位での時間計測
 double mstime2=0;
 
-
 double t_before=0;
 double t_after;
 double t_diff;
@@ -54,6 +53,11 @@ double kyori=0;
 
 int odo_mode=0;
 
+double roomba_dia=348.5;
+
+double roomba_front_Xpoint;
+double roomba_front_Ypoint;
+
 /********************************
 	                       ■■  
 	 ■■■■■■   ■■■■   ■■■■■■■■■ 
@@ -67,7 +71,7 @@ int odo_mode=0;
 	 ■■                        
 	 ■■  
 ***********************************/
-#define SERIAL_PORT_1 "\\\\.\\COM25"
+#define SERIAL_PORT_1 "\\\\.\\COM16"
 
 char buf1[1024];
 char buf2[1024];
@@ -91,7 +95,6 @@ long MotionStartTime=0;//モーションが始まったときの時刻
 double get_millisec(void)
 {
 	double ms_out;
-	double now_time;
 
     #define CPP11_TIME //Linux, WSL, code::blocks64bit版など
     //#undef CPP11_TIME //code::blocks32bit版など
@@ -111,9 +114,6 @@ double get_millisec(void)
 	ms_out=sec1*1000;
     #endif
 
-	// if(!odo_mode){now_time = ms_out;}
-	// else{now_time = ms_out - now_time;}
-	// printf("get_millisec() %f [ms], odo_mode = %d",now_time , odo_mode);//debug
 	return ms_out;
 }
 
@@ -155,8 +155,6 @@ void init()
 
 printf("init()..");
 	sleep_msec(30);
-//for(int i=0;i<1000;i++)
-//    usleep(1000);//test
 printf("Done.\n");
 }
 
@@ -195,7 +193,7 @@ char send_command_one(int cmd_in, int port_in)
 	char *sbuf=roomba[port_in].sbuf;
 	serial *s=&rb_serial[port_in];
 	sbuf[0]=(unsigned char)cmd_in;//1バイト分セット．usigned charに型セット
-	s->send(sbuf,1);//コマンド送信
+	s->send(sbuf,1);//コマンド送信//ここで問題発生
 
 	sprintf(buf1, "send_command_one(%d) rb[%d]sbuf[0]=(%d)\n",cmd_in,port_in,(unsigned char)sbuf[0]);
 	printf("%s",buf1);
@@ -468,10 +466,8 @@ char get_sensors(int port_in)
     //t_after=get_millisec();
 
     if(flag_serial_ready[port_in]!=1)return -1;//ポート準備ができていなければ処理しない．
-
     serial *s=&rb_serial[port_in];
     RoombaSensor *rss=&roomba[port_in].sensor;
-
 	s->purge();//シリアル通信のバッファクリア
 
 //roomba[port_in].sensor.stat = get_sensor_1B(58,port_in);
@@ -518,7 +514,7 @@ return 1;
                                                                        ■■ ■      
                                                                         ■■               
 ************************************************/
-char get_odo(int port_in)
+double get_odo(FILE *fp ,int port_in)
 {
     t_after = get_millisec();
 	if(!odo_mode){start_time = t_after;} //最初の時間を取得
@@ -526,14 +522,14 @@ char get_odo(int port_in)
 	t_diff = (t_after - t_before)/1000;
 
     if(flag_serial_ready[port_in]!=1)return -1;//ポート準備ができていなければ処理しない．
-
     serial *s=&rb_serial[port_in];
     RoombaSensor *rss=&roomba[port_in].sensor;
-
 	s->purge();
 
 	encode_L_after = get_sensor_2B(43,port_in);
 	encode_R_after = get_sensor_2B(44,port_in);
+
+    encode_L_diff =  encode_L_after - encode_L_before;
 
     encode_L_diff = encode_L_after - encode_L_before;
     encode_R_diff = encode_R_after - encode_R_before;
@@ -557,11 +553,18 @@ char get_odo(int port_in)
 		theta_t_after = omega_after * t_diff + theta_t_after;
 		x_t = kyori * cos(theta_t_after) + x_t;
 		y_t = kyori * sin(theta_t_after) + y_t;
+		roomba_front_Xpoint = (roomba_dia / 2000) * cos(theta_t_after) + x_t;
+		roomba_front_Ypoint = (roomba_dia / 2000) * sin(theta_t_after) + y_t;
+	}
+	else{
+	    // fprintf( fp , "time[s] , x_t[m] , y_t[m] ,theta[deg]\n");
 	}
 
-	printf("now_time = %.4f [m] " , (t_after - start_time)/1000);
-	printf("x_t = %.4f [m] , y_t = %.4f [m] , theta_t_after = %.4f [rad]\n" , x_t , y_t , theta_t_after);
-	// printf("now_time = %d [ms] , start_time = %d [ms] \n" , now_time , start_time);
+	// printf("now_time = %.2f [s] " , (t_after - start_time)/1000);
+	// printf("enc_L = %d [count] enc_R = %d [count]" , get_sensor_2B(43,port_in) , get_sensor_2B(44,port_in));
+	// printf("x_t = %.3f [m] , y_t = %.3f [m] , theta_t_after = %.0f [deg]\n" , x_t , y_t , 180*theta_t_after/pi);
+
+	// fprintf( fp , "%.2f , %.3f , %.3f , %.0f \n" , (t_after - start_time)/1000 , x_t , y_t , 180*theta_t_after/pi);
 
     t_before = t_after;
     encode_L_before = encode_L_after;
@@ -573,6 +576,8 @@ char get_odo(int port_in)
 
 	return 1;
 }
+
+int way_point(){}
 
 
 //--------------------------
@@ -708,9 +713,7 @@ void keyf(unsigned char key , int x , int y)//一般キー入力
 
 	int port=current_control_port;
 	RoombaSystem *rb=&roomba[port];
-
 	if((current_control_port==1)&&(flag_serial_ready[1]))port=1;
-
 
     switch(key)
     {
@@ -785,66 +788,35 @@ void keyf(unsigned char key , int x , int y)//一般キー入力
     	}
     	case '0':
     	{
-    	    // get_odo(port);
     	    drive_tires(0);//turn right
-
             break;
     	}
     	case '1':
     	{
-    	    // get_odo(port);
     	    drive_tires(1);//go forward
-
             break;
     	}
     	case '2':
     	{
-    	    // get_odo(port);
     	    drive_tires(2);//turn left
-
             break;
     	}
     	case '3':
     	{
-    	    // get_odo(port);
     	    drive_tires(3);//go backward
-
             break;
     	}
 
     	case '4':
     	{
-			get_odo(port);
     	    drive_tires(1);//go backward
     	    sleep_msec(3000);
     	    drive_tires(1);
-    	    get_odo(port);
-            break;
-    	}
-
-    	case '5':
-    	{
-			get_odo(port);
-    	    drive_tires(3);//go backward
-    	    sleep_msec(3000);
-    	    drive_tires(3);
-    	    get_odo(port);
-            break;
-    	}
-
-		case '6':
-    	{
-			get_odo(port);
-    	    drive_tires(0);//go backward
-    	    sleep_msec(3000);
-    	    drive_tires(0);
-    	    get_odo(port);
             break;
     	}
 
 		case 'o':
     	{
-    	    get_odo(port);
             break;
     	}
 
@@ -896,38 +868,65 @@ void key_input(void)
 	int speedR;
 	int velocity;
 	int radius;
+	int way_point_mode = 0;
+	const char *fname = "comma.csv";
+
 	RoombaSystem *rb=&roomba[port];
 	if((current_control_port==1)&&(flag_serial_ready[1]))port=1;
     rb->flag_sensor_ready=1;
     send_command_one(RB_START, port);
-    send_command_one(RB_FULL, port);
-    get_odo(port);
+    send_command_one(RB_SAFE, port);
+	FILE *fp;//csv書き込み
+	// printf("here is OK\n");
+	fp = fopen( fname, "w" );
+	if( fp == NULL ){printf( "%sファイルが開けません¥n", fname );}
+    get_odo(fp, port);
+
     while(1)
-    {
-		
-		if(GetAsyncKeyState(0x57)) {
+    {		
+		if(GetAsyncKeyState(0x57)) { //Wキー
 			speedL = 120;
 			speedR = 120;
 			velocity = 500;
 			radius = 0;
 		}
-		else if(GetAsyncKeyState(0x41)) {
-			speedL=-120;
-			speedR=120;
-			velocity = 300;
-			radius = 20;
-		}
-		else if(GetAsyncKeyState(0x44)) {
+		else if(GetAsyncKeyState(0x41)) { //Dキー
 			speedL=120;
 			speedR=-120;
 			velocity = 300;
+			radius = 20;
+		}
+		else if(GetAsyncKeyState(0x44)) { //Aキー
+			speedL=-120;
+			speedR=120;
+			velocity = 300;
 			radius = -20;
 		}
-		else if(GetAsyncKeyState(0x53)) {
+		else if(GetAsyncKeyState(0x53)) { //Sキー
 			speedL=-120;
 			speedR=-120;
 			velocity = -500;
 			radius = 0;
+		}
+		else if(GetAsyncKeyState(0x45)) { //Eキー
+			speedL=120/2;
+			speedR=120;
+		}
+		else if(GetAsyncKeyState(0x51)) { //Qキー
+			speedL=120;
+			speedR=120/2;
+		}
+		else if(GetAsyncKeyState(0x43)) { //Cキー
+			speedL=-120/2;
+			speedR=-120;
+		}
+		else if(GetAsyncKeyState(0x5A)) { //Zキー
+			speedL=-120;
+			speedR=-120/2;
+		}
+		else if(GetAsyncKeyState(0x20)){
+			printf("push space");
+			way_point_mode = 1;
 		}
 		else {
 			speedL=0;
@@ -940,7 +939,7 @@ void key_input(void)
         send_drive_command(speedL,speedR,port);
 		// send_velocity_command(velocity,radius,port);
 
-		get_odo(port);
+		get_odo(fp,port);
 
     // printf("keyf() input: ");
     // key=getchar();
@@ -963,15 +962,11 @@ int id;
 
 	res=rb_serial[0].init(SERIAL_PORT_1,115200);//初期化
   	rb_serial[0].purge();//バッファクリア
-	if(res!=true)
-	  {
-	    printf("Port Open Error#0 [%s]\n", SERIAL_PORT_1);
-	  }
-	  else
-      {
-          printf("Port[%s] Ready.\n", SERIAL_PORT_1);
-          flag_serial_ready[0]=1;
-      }
+	if(res!=true){printf("Port Open Error#0 [%s]\n", SERIAL_PORT_1);}
+	else{
+		printf("Port[%s] Ready.\n", SERIAL_PORT_1);
+		flag_serial_ready[0]=1;
+    }
 
 
    	init();//変数初期化
@@ -983,8 +978,6 @@ int id;
 
 	//キーボード入力受付
     key_input();//for NoGUI
-
-
 	return 0;
 }
 

@@ -251,7 +251,9 @@ if(flag_opened!=1)
     {
       return byte;
     }
-    else return -1;
+    else{
+      return -1;
+  }
 #endif
 
 #ifdef LINUX
