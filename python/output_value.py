@@ -3,12 +3,13 @@
 #2020.1.14西野君ソースコードQlearn_and_run.pyを参考
 
 import numpy as np
+import json
 import math
 import time
 import serial
 
 #########################################################
-RB_PORT = "/dev/ttyUSB0"#シリアルポート設定
+RB_PORT = "/dev/ttyUSB1"#シリアルポート設定
 #########################################################
 
 '''シリアル通信用変数'''
@@ -74,7 +75,7 @@ def EncVelCalculation(enc, t):
     #1時刻前の値
     global Angle_R_before, Angle_L_before, delta_t
     # タイヤ半径[m]
-    r = 0.0036
+    r = 0.036
     # 移動距離計算
     L_R = (2*math.pi*r)*(enc[0]/508.8)
     L_L = (2*math.pi*r)*(enc[1]/508.8)
@@ -100,8 +101,8 @@ def LocationCalculation():
     angle = before_angular_vel*delta_t + before_angle
     # 現在のx座標を算出（x軸方向の速度の積分）
     x = before_vel*math.cos(angle)*delta_t + before_x
-    y = before_vel*math.sin(angle)*delta_t + before_y
     # 現在のy座標を算出（y軸方向の速度の積分）
+    y = before_vel*math.sin(angle)*delta_t + before_y
     
     before_angular_vel = angular_vel
     before_angle = angle
@@ -109,7 +110,7 @@ def LocationCalculation():
     before_y = y
     before_vel = vel
     
-    return math.degrees(angle), round(x, 3), y
+    return x, y, angle
 
 
 delta_t = 0.0
@@ -142,33 +143,61 @@ def main():
     ser = serial.Serial(RB_PORT, RB_RATE, timeout=10)
     stop_flag=1
     
+    data_dict = {}
     before_t = 0.0  # 1時刻前の時間
     T = 0.235  # 車輪間隔
     start_time = time.time()
     # 経過時間、エンコーダ値出力処理
     before_x = 0.0
-    while True:
-        time.sleep(0.05)
-        now_time = time.time() - start_time
-        now_time = round(now_time, 3)  # 有効数字3桁に丸める(値が小さすぎると見にくいため)
-        # 微小時間の計算
-        delta_t = now_time - before_t
-        # エンコーダの値取得
-        el,er = GetEncs(ser)
-        # エンコーダ速度計算
-        enc_vel_list = EncVelCalculation([el, er], now_time)
-        # 並進速度計算
-        vel = sum(enc_vel_list)/2
-        # 回転角速度計算
-        angular_vel = (enc_vel_list[0] - enc_vel_list[1])/T
-        # ロボットの座標計算
-        angle, x, y = LocationCalculation()
-        # 値出力
-        print(f"Time[{now_time}], Enc[L: {el} R: {er}]")
-        print(f"Enc_vel[L: {enc_vel_list[0]}  R: {enc_vel_list[1]}]")
-        print(f"Liner_vel[{vel}]")
-        print(f"Anglar_vel[{angular_vel}]")
-        print(f"Angle, x, y: {math.degrees(angle)}, {x}, {y}\n")
-        before_t = now_time
+    # 初期化用変数
+    first_flg = True
+    x_init = 0.0
+    y_init = 0.0
+    angle_init = 0.0
+    try:
+        while True:
+            time.sleep(0.05)
+            now_time = time.time() - start_time
+            now_time = round(now_time, 3)  # 有効数字3桁に丸める(値が小さすぎると見にくいため)
+            # 微小時間の計算
+            delta_t = now_time - before_t
+            # エンコーダの値取得
+            el,er = GetEncs(ser)
+            # エンコーダ速度計算
+            enc_vel_list = EncVelCalculation([el, er], now_time)
+            # 並進速度計算
+            vel = sum(enc_vel_list)/2
+            # 回転角速度計算
+            angular_vel = (enc_vel_list[0] - enc_vel_list[1])/T
+            # ロボットの座標計算
+            x, y, angle = LocationCalculation()
+            
+            # 最初だけ初期化
+            if first_flg and not x == 0.0:
+                x_init = x
+                y_init = y
+                angle_init = angle
+                print(x_init, y_init, angle_init)
+                first_flg = False 
+            x -= x_init
+            y -= y_init
+            angle -= angle_init
+
+            # 値出力
+            print(f"Time[{now_time}], Enc[L: {el} R: {er}]")
+            print(f"Enc_vel[L: {enc_vel_list[0]}  R: {enc_vel_list[1]}]")
+            print(f"Liner_vel[{vel}]")
+            print(f"Anglar_vel[{angular_vel}]")
+            print(f"x, y, Angle: {x}, {y}, {math.degrees(angle)}\n")
+            before_t = now_time
+
+            
+            # 値格納
+            data_dict[now_time] = [x, y, math.degrees(angle)]
+    except KeyboardInterrupt:
+        # 値保存
+        with open('angle_data.txt', 'w') as f:
+            f.write(json.dumps(data_dict))
+
 
 main()
