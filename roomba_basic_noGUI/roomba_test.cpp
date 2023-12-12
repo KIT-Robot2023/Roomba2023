@@ -9,6 +9,7 @@
 #include "roomba_cmd.h"
 #include "roomba_types.h"
 #include <windows.h>
+#include <string.h>
 
 double mstime1=0;//msec単位での時間計測
 double mstime2=0;
@@ -557,14 +558,14 @@ double get_odo(FILE *fp ,int port_in)
 		roomba_front_Ypoint = (roomba_dia / 2000) * sin(theta_t_after) + y_t;
 	}
 	else{
-	    // fprintf( fp , "time[s] , x_t[m] , y_t[m] ,theta[deg]\n");
+	    fprintf( fp , "time[s] , x_t[m] , y_t[m] ,theta[deg]\n");
 	}
 
 	// printf("now_time = %.2f [s] " , (t_after - start_time)/1000);
 	// printf("enc_L = %d [count] enc_R = %d [count]" , get_sensor_2B(43,port_in) , get_sensor_2B(44,port_in));
-	// printf("x_t = %.3f [m] , y_t = %.3f [m] , theta_t_after = %.0f [deg]\n" , x_t , y_t , 180*theta_t_after/pi);
+	printf("x_t = %.3f [m] , y_t = %.3f [m] , theta_t_after = %.3f [deg]\n" , x_t , y_t , 180*theta_t_after/pi);
 
-	// fprintf( fp , "%.2f , %.3f , %.3f , %.0f \n" , (t_after - start_time)/1000 , x_t , y_t , 180*theta_t_after/pi);
+	fprintf( fp , "%.2f , %.3f , %.3f , %.3f \n" , (t_after - start_time)/1000 , x_t , y_t , 180*theta_t_after/pi);
 
     t_before = t_after;
     encode_L_before = encode_L_after;
@@ -576,6 +577,21 @@ double get_odo(FILE *fp ,int port_in)
 
 	return 1;
 }
+/***************************************************************************
+                                            ■              
+                                            ■              
+                                                       ■■  
+■■  ■■   ■  ■■■■ ■■   ■■    ■■■■■    ■■■■   ■  ■■■■■■ ■■■■ 
+ ■  ■■   ■     ■  ■   ■     ■■   ■  ■■   ■  ■  ■■   ■  ■   
+ ■  ■ ■ ■■     ■  ■   ■     ■    ■  ■    ■  ■  ■    ■  ■   
+ ■ ■■ ■ ■  ■■■■■  ■■ ■      ■    ■  ■    ■  ■  ■    ■  ■   
+ ■■■  ■ ■  ■   ■   ■ ■      ■    ■  ■    ■  ■  ■    ■  ■   
+  ■■  ■■■  ■   ■   ■■■      ■■   ■  ■■  ■■  ■  ■    ■  ■■  
+  ■■   ■■  ■■■■■    ■       ■■■■■    ■■■■   ■  ■    ■   ■■■
+                    ■       ■                              
+                   ■■       ■                              
+                 ■■■        ■ 
+***************************************************************************/
 
 int way_point(){}
 
@@ -846,6 +862,21 @@ void keyf(unsigned char key , int x , int y)//一般キー入力
     }
 }
 
+void filename_make(char** name_date){
+  time_t t;
+  struct tm *tm_info;
+  time(&t);
+  tm_info = localtime(&t);
+
+  // "yyyyMMddHHmmss"形式の文字列を作成
+  char* make_name_date = (char*)malloc(sizeof(int) * 27);  // 14桁の数字 + 1桁の終端文字('\0')用に15要素確保
+  sprintf(make_name_date, "CSV_%04d%02d%02d%02d%02d%02d.csv",
+          tm_info->tm_year + 1900, tm_info->tm_mon + 1, tm_info->tm_mday,
+          tm_info->tm_hour, tm_info->tm_min, tm_info->tm_sec);
+
+  *name_date = make_name_date;
+}
+
 /*****************************************************
                             ■■                      
                                           
@@ -868,17 +899,22 @@ void key_input(void)
 	int speedR;
 	int velocity;
 	int radius;
-	int way_point_mode = 0;
-	const char *fname = "comma.csv";
+
+	char* string=NULL;
+	filename_make(&string);
+
+	const char *fname = string;
 
 	RoombaSystem *rb=&roomba[port];
 	if((current_control_port==1)&&(flag_serial_ready[1]))port=1;
     rb->flag_sensor_ready=1;
     send_command_one(RB_START, port);
     send_command_one(RB_SAFE, port);
+
 	FILE *fp;//csv書き込み
-	// printf("here is OK\n");
+
 	fp = fopen( fname, "w" );
+	
 	if( fp == NULL ){printf( "%sファイルが開けません¥n", fname );}
     get_odo(fp, port);
 
@@ -926,7 +962,6 @@ void key_input(void)
 		}
 		else if(GetAsyncKeyState(0x20)){
 			printf("push space");
-			way_point_mode = 1;
 		}
 		else {
 			speedL=0;
