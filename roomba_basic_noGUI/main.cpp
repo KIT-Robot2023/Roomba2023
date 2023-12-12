@@ -11,7 +11,7 @@
 #include "include/roomba_open_interface.hpp"
 #include "include/timer.hpp"
 
-#define VERTIAL
+// #define VERTIAL
 
 using std::chrono::duration_cast;
 using std::chrono::milliseconds;
@@ -41,7 +41,7 @@ int main() {
     }
 
     serial serial;
-    roomba::Command roomba_command(serial, "\\\\.\\COM13");
+    roomba::Command roomba_command(serial, "\\\\.\\COM14");
     diff2_odometry::Diff2OdometryConfig odo_config(508, USHRT_MAX, 0.036, 0.235);
 #ifdef VERTIAL
     diff2_odometry::VertialDiff2Odometry odometry(odo_config);
