@@ -1,5 +1,5 @@
 clear;
-csv = readmatrix("2023-12-05__11-38-25.csv");
+csv = readmatrix("2023-12-12__11-15-17.csv");
 time = csv(:,1) - csv(1,1);
 x = csv(:,2);
 y = csv(:,3);
