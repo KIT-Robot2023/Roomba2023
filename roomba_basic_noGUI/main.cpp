@@ -41,7 +41,7 @@ int main() {
     }
 
     serial serial;
-    roomba::Command roomba_command(serial, "\\\\.\\COM14");
+    roomba::Command roomba_command(serial, "\\\\.\\COM10");
     diff2_odometry::Diff2OdometryConfig odo_config(508, USHRT_MAX, 0.036, 0.235);
 #ifdef VERTIAL
     diff2_odometry::VertialDiff2Odometry odometry(odo_config);
@@ -62,6 +62,10 @@ int main() {
                 case 'a': roomba.drive(base_vel, -base_vel); break;
                 case 's': roomba.drive(-base_vel, -base_vel); break;
                 case 'd': roomba.drive(-base_vel, base_vel); break;
+                case 'q': roomba.drive(base_vel, base_vel / 4.0); break;
+                case 'e': roomba.drive(base_vel / 4.0, base_vel); break;
+                case 'z': roomba.drive(-base_vel, -base_vel / 4.0); break;
+                case 'c': roomba.drive(-base_vel / 4.0, -base_vel); break;
                 case 0x20: roomba.drive(0, 0);
                 default: break;
                 }
