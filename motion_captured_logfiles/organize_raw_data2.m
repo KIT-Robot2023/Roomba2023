@@ -1,11 +1,11 @@
-path = "raw_data/Take 2023-12-05 11.43.00 AM.csv"
+path = "raw_data/Take 2023-12-12 11.09.00 AM.csv"
 [filepath,name,ext] = fileparts(path)
 splited_name = strsplit(name)
 
 raw_csv = readmatrix(path);
 time = raw_csv(1:end, 1);
 x = raw_csv(1:end, 2);
-y = -1*raw_csv(1:end, 3);
+y = raw_csv(1:end, 3);
 theta = raw_csv(1:end,4);
 
 output_dir = "organized_data\";
