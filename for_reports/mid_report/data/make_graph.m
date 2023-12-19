@@ -5,7 +5,7 @@ roomba_csv = readmatrix("forward_odometry_data.csv");
 capture_csv = readmatrix("forward_motion_caputured_data.csv");
 
 capture.time = capture_csv(:,1) - capture_csv(1,1);
-capture.x = capture_csv(:,2);
+capture.x = capture_csv(:,2) - capture_csv(1,2);
 capture.y = capture_csv(:,3) - capture_csv(1,3);
 capture.theta = capture_csv(:,4);
 
@@ -47,9 +47,9 @@ roomba_csv = readmatrix("rotation_odometry_data.csv");
 capture_csv = readmatrix("rotation_motion_caputured_data.csv");
 
 capture.time = capture_csv(:,1) - capture_csv(1,1);
-capture.x = capture_csv(:,2);
+capture.x = capture_csv(:,2) - capture_csv(1,2);
 capture.y = capture_csv(:,3) - capture_csv(1,3);
-capture.theta = capture_csv(:,4);
+capture.theta = capture_csv(:,4) -capture_csv(1,4);
 
 roomba.time = roomba_csv(:,1)/1000 - roomba_csv(1,1)/1000;
 roomba.x = roomba_csv(:,2);
@@ -85,13 +85,13 @@ roomba_csv = readmatrix("circle_odometry_data.csv");
 capture_csv = readmatrix("circle_motion_caputured_data.csv");
 
 capture.time = capture_csv(:,1) - capture_csv(1,1);
-capture.x = capture_csv(:,2);
-capture.y = capture_csv(:,3);
-capture.theta = capture_csv(:,4);
+capture.x = capture_csv(:,2) - capture_csv(1,2);
+capture.y = capture_csv(:,3) - capture_csv(1,3);
+capture.theta = capture_csv(:,4) - capture_csv(1,4);
 
 roomba.time = roomba_csv(:,1)/1000 - roomba_csv(1,1)/1000;
 roomba.x = roomba_csv(:,2);
-roomba.y = roomba_csv(:,3);
+roomba.y = roomba_csv(:,3); 
 roomba.theta = roomba_csv(:,4);
 
 figure;
