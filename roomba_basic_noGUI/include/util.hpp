@@ -26,4 +26,12 @@ inline std::string get_date_and_time() {
     return s.str();
 }
 
+inline constexpr double limit(double target, double min, double max) {
+    if (target < min)
+        return min;
+    else if (max < target)
+        return max;
+    else
+        return target;
+}
 }  // namespace util
