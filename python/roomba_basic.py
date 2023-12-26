@@ -295,7 +295,7 @@ def main():
             print("最初のエンコーダの値は:左が"+str(encL_prev)+"で，右が"+str(encL_prev)+"です．時間も取得しました")
 
             start_time = time.time()
-            while time.time() - start_time < 4:  # 現在の時刻と開始時刻の差が5秒未満の間 つまり5秒間ループ処理
+            while time.time() - start_time < 1:  # 現在の時刻と開始時刻の差が5秒未満の間 つまり5秒間ループ処理
                 #モータを動かす．（まずは直進させてみる）
                 print("Go_Straight！！")
                 stop_flag = 0
