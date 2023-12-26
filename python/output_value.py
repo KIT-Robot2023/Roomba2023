@@ -9,7 +9,7 @@ import time
 import serial
 
 #########################################################
-RB_PORT = "/dev/ttyUSB1"#シリアルポート設定
+RB_PORT = "/dev/ttyUSB0"#シリアルポート設定
 #########################################################
 
 '''シリアル通信用変数'''
@@ -97,7 +97,7 @@ def LocationCalculation():
     global delta_t, angular_vel, angle, vel, before_angular_vel, before_angle, before_vel, x, before_x, y, before_y
 
     # 現在の角度を算出（角速度の積分）
-    print(vel, before_vel)
+    #print(vel, before_vel)
     angle = before_angular_vel*delta_t + before_angle
     # 現在のx座標を算出（x軸方向の速度の積分）
     x = before_vel*math.cos(angle)*delta_t + before_x
@@ -146,6 +146,20 @@ def main():
     data_dict = {}
     before_t = 0.0  # 1時刻前の時間
     T = 0.235  # 車輪間隔
+    # START
+    print("START")
+    stop_flag = 1
+    oimode1 = GetOIMode(ser)
+    ser.write(RB_START)
+    oimode2 = GetOIMode(ser)
+    print("OIMode:"+str(oimode1)+"->"+str(oimode2))
+    # SAFE
+    print("SAFE")
+    stop_flag = 1
+    oimode1 = GetOIMode(ser)
+    ser.write(RB_SAFE)
+    oimode2 = GetOIMode(ser)
+    print("OIMode:"+str(oimode1)+"->"+str(oimode2))
     start_time = time.time()
     # 経過時間、エンコーダ値出力処理
     before_x = 0.0
@@ -154,6 +168,11 @@ def main():
     x_init = 0.0
     y_init = 0.0
     angle_init = 0.0
+    # 比例制御ゲイン
+    k1 = 100
+    k2 = 0.0
+    # ウェイポイントの指定
+    wp = [0.3, 0.0]
     try:
         while True:
             time.sleep(0.05)
@@ -177,23 +196,38 @@ def main():
                 x_init = x
                 y_init = y
                 angle_init = angle
-                print(x_init, y_init, angle_init)
+                #print(x_init, y_init, angle_init)
                 first_flg = False 
             x -= x_init
             y -= y_init
             angle -= angle_init
 
             # 値出力
-            print(f"Time[{now_time}], Enc[L: {el} R: {er}]")
-            print(f"Enc_vel[L: {enc_vel_list[0]}  R: {enc_vel_list[1]}]")
-            print(f"Liner_vel[{vel}]")
-            print(f"Anglar_vel[{angular_vel}]")
+            #print(f"Time[{now_time}], Enc[L: {el} R: {er}]")
+            #print(f"Enc_vel[L: {enc_vel_list[0]}  R: {enc_vel_list[1]}]")
+            #print(f"Liner_vel[{vel}]")
+            #print(f"Anglar_vel[{angular_vel}]")
             print(f"x, y, Angle: {x}, {y}, {math.degrees(angle)}\n")
             before_t = now_time
 
-            
             # 値格納
             data_dict[now_time] = [x, y, math.degrees(angle)]
+
+            # ウェイポイント計算
+            robot_x = -x*10
+            robot_y = y
+            angle_wp = math.degrees(math.atan2(wp[1]-robot_y, wp[0]-robot_x))
+            dist_wp = math.sqrt((wp[1]-robot_y)**2 + (wp[0]-robot_x)**2)
+
+            # 足回り制御
+            print(f"diff >>> x:{wp[0]-robot_x}, y: {wp[1]-robot_y}")
+            if not wp[0]-robot_x <= 0.1 and wp[1]-robot_y <= 0.1:
+                # 制御量計算
+                left_vel = k1*dist_wp - k2*angle_wp
+                right_vel = k1*dist_wp + k2*angle_wp
+                # PWM
+                DrivePWM(ser, int(left_vel), int(right_vel))
+
     except KeyboardInterrupt:
         # 値保存
         with open('angle_data.txt', 'w') as f:

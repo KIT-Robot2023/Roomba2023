@@ -8,7 +8,7 @@ import time
 import serial
 
 #########################################################
-RB_PORT = "COM6"#シリアルポート設定
+RB_PORT = "/dev/ttyUSB1"#シリアルポート設定
 #########################################################
 
 '''シリアル通信用変数'''
@@ -87,14 +87,15 @@ def main():
     stop_flag=1
     
     while True:
-        wp = []
-        angle_wp = math.atan2(wp[1]-y, wp[0]-x)
-        dist_wp = math.sqrt((wp[1]-y)**2 + (wp[0]-x)**2)
-        #################################
         val=input('Input command char: ')
         #print("Input val="+val)
         speed=70
         speed_rot=50
+
+        # エンコーダの値表示処理
+        #el,er = GetEncs(ser)
+        #print("Enc L:"+str(el)+" R:"+str(er))
+
         if stop_flag != 1:
             print("STOP MOTOR")
             stop_flag = 1
