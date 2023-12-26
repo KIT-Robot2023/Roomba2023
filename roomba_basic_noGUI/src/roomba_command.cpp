@@ -22,7 +22,7 @@ bool Command::init() {
 void Command::send_one_command(const uint8_t cmd_in) {
     uint8_t sbuf[64];
     sbuf[0] = cmd_in;  // 1バイト分セット．usigned charに型セット
-    printf("send_command: %d\n", sbuf[0]);
+    // printf("send_command: %d\n", sbuf[0]);
     serial_.send(sbuf, 1);  // コマンド送信
 }
 
@@ -77,10 +77,10 @@ void Command::send_drive_direct_command(int left_motor_vel, int right_motor_vel)
         RHbyte = (RHbyte >> 8);
         int RLbyte = right_motor_vel & 0x00ff;
 
-        sbuf[index++] = (unsigned char)LHbyte;
-        sbuf[index++] = (unsigned char)LLbyte;
         sbuf[index++] = (unsigned char)RHbyte;
         sbuf[index++] = (unsigned char)RLbyte;
+        sbuf[index++] = (unsigned char)LHbyte;
+        sbuf[index++] = (unsigned char)LLbyte;
 
         serial_.send(sbuf, byte);
     } else {
