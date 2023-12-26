@@ -2,7 +2,7 @@ CC = g++
 CC_MINGW64VSC = c:\mingw64\bin\g++.exe
 CXXFLAGS    = -Wall -Wextra -std=c++17
 SAMPLE = src/roomba_test.cpp src/serial.cpp
-SRC = main.cpp src/serial.cpp src/roomba.cpp src/roomba_command.cpp src/songs.cpp src/diff2_odometry.cpp
+SRC = main.cpp src/serial.cpp src/roomba.cpp src/roomba_command.cpp src/songs.cpp src/diff2_odometry.cpp src/pure_pursuit.cpp
 WIN_LIB32 := mingw32_lib/libfreeglut/libfreeglut.a
 WIN_LIB64 := mingw32_lib/libfreeglut/x64/freeglut.lib
 WIN_OPT = -lglu32 -lm -lopengl32 -static -lstdc++ -lgcc  -lwinpthread

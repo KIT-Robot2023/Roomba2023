@@ -2,7 +2,7 @@
 #include <chrono>
 #include <iostream>
 
-#include "diff2_odometry.hpp"
+#include "pure_pursuit.hpp"
 #include "roomba_command.hpp"
 
 namespace roomba {
@@ -27,48 +27,32 @@ class Roomba {
 public:
     Roomba() = default;
     ~Roomba() = default;
-    Roomba(roomba::Command &command, diff2_odometry::Diff2Odometry &odometry)
-        : command_(command), odometry_(odometry){};
+    Roomba(roomba::Command &command, diff2_odometry::Diff2Odometry &odometry, pure_pursuit::PurePursuit &pure_pursuit)
+        : command_(command), odometry_(odometry), pure_pursuit_(pure_pursuit){};
+    enum class SystemMode {
+        init = 0,
+        manual,
+        path_tracking,
+    } system_mode = SystemMode::manual;
+
     bool init();
     void cycle();
-    void drive(int left_vel, int right_vel);  //[mm/s]
+    void drive(double left_vel, double right_vel);  //[m/s]
+    void drive(pure_pursuit::Output output) { drive(output.left, output.right); };
+    void set_path(pure_pursuit::Path path) { pure_pursuit_.set_path(path); };
+    void start_path_tracking() {
+        system_mode = SystemMode::path_tracking;
+        pure_pursuit_.start_tracking();
+    }
     const Sensors &sensors() { return sensors_; };
     const diff2_odometry::Diff2OdometryState &odo() { return odometry_.state(); }
-    void set_mode();
+    void set_mode(const uint8_t cmd) { command_.send_one_command(cmd); };
     std::chrono::steady_clock::time_point current_time() const { return current_time_; };
 
 private:
-    void get_sensors_() {
-        sensors_.enc_left = command_.get_encoder_left();
-        sensors_.enc_right = command_.get_encoder_right();
-    };
     roomba::Command &command_;
     diff2_odometry::Diff2Odometry &odometry_;
-    roomba::Sensors sensors_;
-
-    std::chrono::steady_clock::time_point prev_time_;
-    std::chrono::steady_clock::time_point current_time_;
-};
-
-class VertialRoomba {
-public:
-    VertialRoomba() = default;
-    ~VertialRoomba() = default;
-    VertialRoomba(diff2_odometry::VertialDiff2Odometry &odometry) : odometry_(odometry){};
-    bool init();
-    void cycle();
-    void drive(int left_vel, int right_vel);  //[mm/s]
-    const Sensors &sensors() { return sensors_; };
-    const diff2_odometry::Diff2OdometryState &odo() { return odometry_.state(); }
-    void set_mode();
-    std::chrono::steady_clock::time_point current_time() const { return current_time_; };
-
-private:
-    // void get_sensors_() {
-    //     sensors_.enc_left = command_.get_encoder_left();
-    //     sensors_.enc_right = command_.get_encoder_right();
-    // };
-    diff2_odometry::VertialDiff2Odometry &odometry_;
+    pure_pursuit::PurePursuit &pure_pursuit_;
     roomba::Sensors sensors_;
 
     std::chrono::steady_clock::time_point prev_time_;
