@@ -25,8 +25,8 @@ public:
     {
         /*calculation odometry*/
         now_time = float(get_now)/1000.0; //ms -> s
-        // printf("od.nowtime = %lf\n",now_time);
-        printf("%lf,",now_time);
+        // printf("%lf\n",now_time);
+        printf("%.1f,",now_time);
         dt = now_time - pre_time;
         // printf("od.dt = %lf\n",dt);
         L_pulse = float(get_L_pulse);
@@ -51,7 +51,7 @@ public:
         theta = omega_pre *dt + theta_pre;
         x_pos = V_pre*cos(theta_pre)*dt+x_pos_pre;
         y_pos = V_pre*sin(theta_pre)*dt+y_pos_pre;
-        printf("%lf,%lf,%lf\n",theta,x_pos,y_pos);
+        printf("%.2f,%.2f,%.2f,",theta,x_pos,y_pos);
 
         /*update val*/
         V_pre = V;

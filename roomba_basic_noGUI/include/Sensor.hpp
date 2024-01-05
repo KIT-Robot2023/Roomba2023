@@ -103,9 +103,9 @@ char get_sensors(int port_in)
 	// rss->Distance=get_sensor_2B(19,port_in);//値が怪しい.ゼロしか出ない
 
 	mstime2 = get_millisec();
-	printf("mstime2 = %lf\n", mstime2);
+	// printf("mstime2 = %lf\n", mstime2);
 	rss->TimeNow = mstime2 - mstime1; // 現在時刻 201101 clock_gettime()使用
-	printf("timenow = %ld\n", rss->TimeNow);
+	// printf("timenow = %ld\n", rss->TimeNow);
 
 	return 1;
 }

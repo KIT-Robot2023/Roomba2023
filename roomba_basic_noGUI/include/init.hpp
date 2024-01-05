@@ -4,6 +4,7 @@
 #include "roomba_cmd.h"
 #include "roomba_types.h"
 #include "Roomba_Odometry.h"
+#include "waypoint.hpp"
 #include "time.hpp"
 
 int ini_Enc_L = 0; // エンコーダーの初期値取得
@@ -24,11 +25,12 @@ serial rb_serial[2]; // シリアル通信クラス
 
 // Odometry Classのインスタンス作成
 Roomba_Odometry Od(36, 235);
+Roomba_waypoint way(95, 10);
 
 //--------------
 // ☆☆☆☆☆☆☆シリアルポート設定☆☆☆☆☆☆☆☆
 // #define SERIAL_PORT_1 "/dev/ttyS16"
-#define SERIAL_PORT_1 "\\\\.\\COM11"
+#define SERIAL_PORT_1 "\\\\.\\COM21"
 //--------------
 
 

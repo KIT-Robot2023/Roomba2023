@@ -19,16 +19,23 @@
 #include "include/timer.hpp"
 #include "include/receive.hpp"
 #include "include/Sensor.hpp"
+
 #include "include/numkeyCtrl.hpp"
 
 int base_pwm = 50;
 int key_input_time = 1;
 int ctrl_time = 10;
 int update_time = 100;
+int i = 0;
+
+int waypoint_mode = 0;
+float Target_x[3] = {0.5};
+float Target_y[3] = {0.5};
 
 Timer key_input_timer(key_input_time,true);
 Timer ctrl_timer(ctrl_time, true);
 Timer data_timer(update_time, true);
+
 
 void mode_change(int port_in)
 {
@@ -46,6 +53,13 @@ void key_input(void)
 	int arg1 = 0;
 	int arg2 = 0;
 
+	float now_xpos = 0;
+	float now_ypos = 0;
+	float now_theta = 0;
+
+	float diff_distance = 0;
+	float diff_thata = 0;
+
 	while (flag)
 	{
 		sleep_msec(100);
@@ -56,12 +70,15 @@ void key_input(void)
 			get_sensors(port);
 			RoombaSensor *rss = &roomba[port].sensor;
 			Od.get_odometry(roomba[port].sensor.TimeNow, rss->EncL - ini_Enc_L, rss->EncR - ini_Enc_R);
+			now_xpos = Od.get_x_pos();
+			now_ypos = Od.get_y_pos();
+			now_theta = Od.get_theta();
 		}
 
-		printf("keyf() input: ");
+		// printf("keyf() input: ");
 		if (key_input_timer())
 		{
-			if (_kbhit())
+			if (_kbhit() && waypoint_mode == 0)
 			{
 				key = getch();
 				switch (key)
@@ -82,16 +99,34 @@ void key_input(void)
 					arg1 = base_pwm;
 					arg2 = -base_pwm;
 					break;
+				case 'p':
+					waypoint_mode = 1;
+					break;
 				default:
 					arg1 = 0;
 					arg2 = 0;
 					break;
 				}
 			}
-			else
+			else if (waypoint_mode == 0)
 			{
 					arg1 = 0;
 					arg2 = 0;
+			}else if(waypoint_mode == 1)
+			{
+				if(abs(Target_x[i]-now_xpos)> 0.1 || abs(Target_y[i]-now_ypos)> 0.1){
+				way.cal_pwm(now_xpos,now_ypos,now_theta,Target_x[i],Target_y[i]);
+
+				arg1 = way.get_Lpwm();
+				arg2 = way.get_Rpwm();
+				diff_distance = way.get_diff_distance();
+				diff_thata = way.get_diff_theta();
+				printf("%d,%d,",arg1,arg2);
+				printf("%.2f,%.2f\n",diff_distance,diff_thata);
+				}else{
+					arg1 = 0;
+					arg2 = 0;
+				}
 			}
 		}
 		if(ctrl_timer()){send_drive_command(arg1, arg2, port);}

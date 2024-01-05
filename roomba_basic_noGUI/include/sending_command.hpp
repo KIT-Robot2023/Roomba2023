@@ -38,7 +38,7 @@ char send_drive_command(int motL, int motR, int port_in)
 			port_in,
 			(unsigned char)sbuf[0], (unsigned char)sbuf[1], (unsigned char)sbuf[2], (unsigned char)sbuf[3]);
 	// printf(buf1);
-	printf("%s", buf1);
+	// printf("%s", buf1);
 	return 1;
 }
 
@@ -59,7 +59,7 @@ char send_pwm_motors_command(int main_brush_pwm_in, int side_brush_pwm_in, int v
 			port_in,
 			(unsigned char)sbuf[0], (unsigned char)sbuf[1], (unsigned char)sbuf[2], (unsigned char)sbuf[3]);
 	// printf(buf1);
-	printf("%s", buf1);
+	// printf("%s", buf1);
 
 	return 1;
 }
