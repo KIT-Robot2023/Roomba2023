@@ -5,10 +5,11 @@ import random
 
 class RoombaSimulator:
     def __init__(self):
-        self.world_pos_position = [random.uniform(-1.5, 1.5), random.uniform(-1.5, 1.5)]  # 初期位置 [x, y]
+        self.world_pos_position = [0,0]#[random.uniform(-1.5, 1.5), random.uniform(-1.5, 1.5)]  # 初期位置 [x, y]
+        self.ball_pos_position = [1,0]#[random.uniform(-1.5, 1.5), random.uniform(-1.5, 1.5)]  # ボールの初期位置 [x, y]
         self.odometry_position = [0, 0]  # オドメトリ
 
-        self.world_orientation = random.uniform(-3.14, 3.14)  # 初期姿勢 (rad)
+        self.world_orientation = 0 #random.uniform(-3.14, 3.14)  # 初期姿勢 (rad)
         self.orientation = 0
 
         self.left_wheel_rotation = 0  # 左車輪の回転角度 (rad)
@@ -21,6 +22,11 @@ class RoombaSimulator:
         self.delta_x = 0
         self.delta_y = 0
         self.delta_theta = 0
+
+        self.vertex1 = (0,0)
+        self.vertex2 = (0,0)
+        self.vertex3 = (0,0)
+        self.vertex4 = (0,0)
 
 
     def odometry_update(self, left_wheel_rotation_delta, right_wheel_rotation_delta):
@@ -62,6 +68,9 @@ class RoombaSimulator:
         # 青い点でRoombaの中心を表現
         plt.plot(self.world_pos_position[0], self.world_pos_position[1], 'bo')
 
+        # 赤い点でRoombaの中心を表現
+        plt.plot(self.ball_pos_position[0], self.ball_pos_position[1], 'ro')
+
         # 半径0.165の円をプロット
         circle = plt.Circle((self.world_pos_position[0], self.world_pos_position[1]), 0.165, color='cyan', fill=False)
         plt.gca().add_patch(circle)
@@ -92,23 +101,23 @@ class RoombaSimulator:
         # 台形の頂点座標
 
         # 左端
-        vertex1 = (self.world_pos_position[0] -  top_side_offset_Xcom + size_offset_Xcom,
+        self.vertex1 = (self.world_pos_position[0] -  top_side_offset_Xcom + size_offset_Xcom,
                    self.world_pos_position[1] -  top_side_offset_Ycom + size_offset_Ycom)
 
         # 左上
-        vertex4 = ((self.world_pos_position[0] -  bottom_side_offset_Xcom) + height_offset_Xcom,
+        self.vertex4 = ((self.world_pos_position[0] -  bottom_side_offset_Xcom) + height_offset_Xcom,
                    (self.world_pos_position[1] -  bottom_side_offset_Ycom) + height_offset_Ycom)
 
         # 右端
-        vertex2 = (self.world_pos_position[0] +  top_side_offset_Xcom + size_offset_Xcom,
+        self.vertex2 = (self.world_pos_position[0] +  top_side_offset_Xcom + size_offset_Xcom,
                    self.world_pos_position[1] +  top_side_offset_Ycom + size_offset_Ycom)
 
         # 右上
-        vertex3 = ((self.world_pos_position[0] +  bottom_side_offset_Xcom) + height_offset_Xcom,
+        self.vertex3 = ((self.world_pos_position[0] +  bottom_side_offset_Xcom) + height_offset_Xcom,
                    (self.world_pos_position[1] +  bottom_side_offset_Ycom) + height_offset_Ycom)
 
         # 台形を描画
-        trapezoid = plt.Polygon([vertex1, vertex2,vertex3,vertex4], fill=False, edgecolor='green')
+        trapezoid = plt.Polygon([self.vertex1, self.vertex2,self.vertex3,self.vertex4], fill=False, edgecolor='green')
 
         plt.gca().add_patch(trapezoid)
 
@@ -127,6 +136,24 @@ class RoombaSimulator:
         plt.title("Roomba Simulator")
         plt.grid(True)
 
+    def is_inside_trapezoid(self):
+        def cross_product(ax, ay, bx, by, cx, cy):
+            return (bx - ax) * (cy - ay) - (by - ay) * (cx - ax)
+
+        # 連続する頂点の各ペアについて外積を計算する．
+        cross_product_ver1to2 = cross_product(self.vertex1[0], self.vertex1[1], self.vertex2[0], self.vertex2[1], self.ball_pos_position[0], self.ball_pos_position[1])
+        cross_product_ver2to3 = cross_product(self.vertex2[0], self.vertex2[1], self.vertex3[0], self.vertex3[1], self.ball_pos_position[0], self.ball_pos_position[1])
+        cross_product_ver3to4 = cross_product(self.vertex3[0], self.vertex3[1], self.vertex4[0], self.vertex4[1], self.ball_pos_position[0], self.ball_pos_position[1])
+        cross_product_ver4to1 = cross_product(self.vertex4[0], self.vertex4[1], self.vertex1[0], self.vertex1[1], self.ball_pos_position[0], self.ball_pos_position[1])
+
+        # ballが台形内に入っているかを判定する．
+        if (cross_product_ver1to2 >= 0 and cross_product_ver2to3 >= 0 and
+                cross_product_ver3to4 >= 0 and cross_product_ver4to1 >= 0) or \
+        (cross_product_ver1to2 <= 0 and cross_product_ver2to3 <= 0 and
+                cross_product_ver3to4 <= 0 and cross_product_ver4to1 <= 0):
+            return True
+        else:
+            return False
 
 # アニメーション用の関数
 def animate(frame):
@@ -136,6 +163,8 @@ def animate(frame):
 
     roomba_simulator.odometry_update(left_wheel_rotation_delta, right_wheel_rotation_delta)
     roomba_simulator.world_pos_update()
+    if roomba_simulator.is_inside_trapezoid():
+        print("see ball")
     roomba_simulator.plot()
 
 # RoombaSimulatorのインスタンス作成
