@@ -9,8 +9,9 @@ Roomba(以下，エージェント)はNm×Nmの平面上にランダムな位置
 | :-: | :------------: | :--: | :-:  | ****
 | 0   | self-postion.x | -N/2 | N/2  | 
 | 1   | self-postion.y | -N/2 | N/2  | 
-| 2   | ball-postion.x | -N/2 | N/2  | 
-| 3   | ball-postion.y | -N/2 | N/2  | 
+| 2   | self-orientation.x | -inf | inf  | 
+| 3   | ball-postion.x | -N/2 | N/2  | 
+| 4   | ball-postion.y | -N/2 | N/2  | 
 
 ボールが撮影出来ていない場合は，観測値として-10が返ってくる．
 
