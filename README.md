@@ -8,6 +8,12 @@
 
 ```
 git add .
+```
+
+```
 git commit -m （ここにコメントを書く．カッコは必要ない）
+```
+
+```
 git push origin group6_shibuya
 ```
