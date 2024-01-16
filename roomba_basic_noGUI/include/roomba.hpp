@@ -38,16 +38,17 @@ public:
     bool init();
     void cycle();
     void drive(double left_vel, double right_vel);  //[m/s]
-    void drive(pure_pursuit::Output output) { drive(output.left, output.right); };
-    void set_path(pure_pursuit::Path path) { pure_pursuit_.set_path(path); };
+    void drive(pure_pursuit::Output output) { drive(output.left, output.right); }
+    void set_path(pure_pursuit::Path path) { pure_pursuit_.set_path(path); }
     void start_path_tracking() {
         system_mode = SystemMode::path_tracking;
         pure_pursuit_.start_tracking();
     }
-    const Sensors &sensors() { return sensors_; };
+    void set_system_mode(SystemMode mode) { system_mode = mode; }
+    const Sensors &sensors() { return sensors_; }
     const diff2_odometry::Diff2OdometryState &odo() { return odometry_.state(); }
-    void set_mode(const uint8_t cmd) { command_.send_one_command(cmd); };
-    std::chrono::steady_clock::time_point current_time() const { return current_time_; };
+    void set_mode(const uint8_t cmd) { command_.send_one_command(cmd); }
+    std::chrono::steady_clock::time_point current_time() const { return current_time_; }
 
 private:
     roomba::Command &command_;

@@ -44,16 +44,16 @@ public:
         prev_right_count_ = 0;
     };
     void cycle();
-    const Diff2OdometryState &state() const { return state_; };
-    const Pose &pose() const { return state_.pose; };
-    const Twist &twist() const { return state_.twist; };
-    double x() { return pose().point.x; };
-    double y() { return pose().point.y; };
+    const Diff2OdometryState &state() const { return state_; }
+    const Pose &pose() const { return state_.pose; }
+    const Twist &twist() const { return state_.twist; }
+    double x() { return pose().point.x; }
+    double y() { return pose().point.y; }
     double theta() { return pose().theta; }
-    double v() { return twist().v; };
-    double w() { return twist().w; };
-    int encoder_left() { return current_left_count_; };
-    int encoder_right() { return current_right_count_; };
+    double v() { return twist().v; }
+    double w() { return twist().w; }
+    int encoder_left() { return current_left_count_; }
+    int encoder_right() { return current_right_count_; }
 
 private:
     roomba::Command &command_;
@@ -70,14 +70,14 @@ private:
 
     double count_to_rad_(const double count) {
         return count * (2.0 * util::pi_d / config_.encoder_count_per_revolution);
-    };
-    double omega_to_vel_(const double omega) { return omega * config_.wheel_radius; };
+    }
+    double omega_to_vel_(const double omega) { return omega * config_.wheel_radius; }
     int delta_count_(int dt_count) {
         if (abs(dt_count) >= config_.encoder_count_range / 2) {
             return util::sign(dt_count) * config_.encoder_count_range - dt_count;
         } else {
             return dt_count;
         }
-    };
+    }
 };
 }  // namespace diff2_odometry

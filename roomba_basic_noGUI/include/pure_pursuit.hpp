@@ -31,23 +31,25 @@ class PurePursuit {
 public:
     PurePursuit() = default;
     ~PurePursuit() = default;
-    PurePursuit(PurePursuitConfig config) : config_(config), setted_flag_(false), tracking_flag_(false){};
+    PurePursuit(PurePursuitConfig config)
+        : config_(config), setted_flag_(false), tracking_flag_(false), target_point_(diff2_odometry::Point(0, 0)){};
 
     void set_path(Path path);
     void start_tracking();
-    void stop_tracking() { tracking_flag_ = false; };
+    void stop_tracking() { tracking_flag_ = false; }
     void calculate(diff2_odometry::Pose current_pose);
     bool tracking() const { return tracking_flag_; }
-    Output output() const { return output_; };
+    diff2_odometry::Point target_point() const { return target_point_; }
+    Output output() const { return output_; }
 
 private:
     PurePursuitConfig config_;
     Path path_;
-    bool setted_flag_ = false;
-    bool tracking_flag_ = false;
+    bool setted_flag_;
+    bool tracking_flag_;
     Output output_;
     int path_count_;
-
+    diff2_odometry::Point target_point_;
     bool point_is_equal(diff2_odometry::Point num1, diff2_odometry::Point num2) {
         if ((num1.x == num2.x) && (num1.y == num2.y)) { return true; }
         return false;

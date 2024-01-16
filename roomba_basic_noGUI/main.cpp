@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <sstream>
 #include <thread>
+#include <cmath> 
 
 #include "include/kbhit.hpp"
 #include "include/roomba.hpp"
@@ -35,11 +36,11 @@ int main() {
         std::cout << "log file opened" << std::endl;
         std::cout << "log file name: " << log_file_name << std::endl;
         std::cout << "write log file header" << std::endl;
-        log_file << "time,odo_x,odo_y,odo_theta,odo_v,odo_w,enc_left,enc_right" << std::endl;
+        log_file << "time,odo_x,odo_y,odo_theta,odo_v,odo_w,enc_left,enc_right,target_x, target_y" << std::endl;
     }
 
     serial serial;
-    roomba::Command roomba_command(serial, "\\\\.\\COM14");
+    roomba::Command roomba_command(serial, "\\\\.\\COM13");
     diff2_odometry::Diff2OdometryConfig odo_config(508, USHRT_MAX, 0.036, 0.235);
     diff2_odometry::Diff2Odometry odometry(roomba_command, odo_config);
     pure_pursuit::PurePursuitConfig pure_pursuit_config(0.8, 0.8, 500.0 / 1000, 100 / 1000.0, 10.0 / 1000.0);
@@ -47,10 +48,11 @@ int main() {
     roomba::Roomba roomba(roomba_command, odometry, pure_pursuit);
     // path
     pure_pursuit::Path path1;
-    path1.points.push_back(diff2_odometry::Point(1.0, 0));
-    path1.points.push_back(diff2_odometry::Point(1.0, 1.0));
-    path1.points.push_back(diff2_odometry::Point(0.0, 1.0));
-    path1.points.push_back(diff2_odometry::Point(0.0, 0.0));
+    for (float i = 0; i < 3; i += 0.1) {
+        const double x = i;
+        const double y = 0.5 * sin(2 * util::pi_d * i);
+        path1.points.push_back(diff2_odometry::Point(x, y));
+    }
     pure_pursuit::Path path2;
     roomba.init();
 
@@ -68,11 +70,11 @@ int main() {
                       << "please type command: ";
             std::string command;
             std::cin >> command;
-            
+
             if (command == "start") {
                 std::cout << "send start mode\n" << std::endl;
                 roomba.set_mode(roomba::open_interfaces::started_commands::start);
-                roomba_init_flag = true;
+                roomba_init_flag = false;
                 break;
             } else if (command == "reset") {
                 std::cout << "send reset command\n" << std::endl;
@@ -134,7 +136,14 @@ int main() {
                 case 'e': roomba.drive(base_vel, base_vel / 4.0); break;
                 case 'z': roomba.drive(-base_vel / 4.0, -base_vel); break;
                 case 'c': roomba.drive(-base_vel, -base_vel / 4.0); break;
-                case 0x20: roomba.drive(0, 0);
+                case 0x20: roomba.drive(0, 0); break;
+                case 0x1b:  // esc
+                    std::cout << "change system to init" << std::endl;
+                    roomba.drive(0.0, 0.0);
+                    roomba.set_system_mode(roomba::Roomba::SystemMode::init);
+                    roomba_init_flag = false;
+                    setting_flag = false;
+                    break;
                 default: break;
                 }
             }
@@ -155,7 +164,8 @@ int main() {
                 << duration_cast<milliseconds>(steady_clock::now() - system_start_time).count() << ","
                 << roomba.odo().pose.point.x << "," << roomba.odo().pose.point.y << "," << roomba.odo().pose.theta
                 << "," << roomba.odo().twist.v << "," << roomba.odo().twist.w << "," << odometry.encoder_left() << ","
-                << odometry.encoder_right() << std::endl;
+                << odometry.encoder_right() << "," << pure_pursuit.target_point().x << ","
+                << pure_pursuit.target_point().y << std::endl;
             log_file << oss.str();
             // std::cout << oss.str();
         }

@@ -1,5 +1,5 @@
 clear;
-csv = readmatrix("2023-12-26__12-09-44.csv");
+csv = readmatrix("2024-01-16__12-14-05.csv");
 time = csv(:,1) - csv(1,1);
 x = csv(:,2);
 y = csv(:,3);
@@ -8,6 +8,8 @@ v = csv(:,5);
 omega = csv(:,6);
 enc_left = csv(:,7);
 enc_right = csv(:,8);
+target_x = csv(:,9);
+target_y = csv(:,10);
 
 figure;
 hold on;
@@ -23,8 +25,9 @@ tile.Padding = 'compact';
 odo_ax = nexttile;
 hold on;
 odo_line = plot(odo_ax, x(1),y(1), '--ob');
-odo_ax.XLim = [-4 4];
-odo_ax.YLim = [-4 4];
+target_line = plot(odo_ax,target_x(1), target_y(1), 'or');
+odo_ax.XLim = [-1 2];
+odo_ax.YLim = [-1 1];
 
 theta_ax = nexttile;
 hold on;
@@ -55,6 +58,9 @@ for i = 2:length(time)
     plot(odo_ax,[x(i-1) x(i)],[y(i-1) y(i)],'-b');
     odo_line.XData = x(i);
     odo_line.YData = y(i);
+    % target_line.XData = target_x(i);
+    % target_line.YData = target_y(i);
+    plot(odo_ax, target_x(i),target_y(i),'*r');
 
     plot(theta_ax,[time(i-1) time(i)],[theta(i-1) theta(i)],'-b');
     theta_line.XData = time(i);
