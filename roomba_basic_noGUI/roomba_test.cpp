@@ -53,11 +53,17 @@ double y_t=0;
 double kyori=0;
 
 int odo_mode=0;
+int memo_mode=0;
 
 double roomba_dia=348.5;
 
-double roomba_front_Xpoint;
-double roomba_front_Ypoint;
+double sumerror_distance=0;
+
+double sumerror_theta;
+double erer_theta;
+double pre_theta;
+
+int target_point = 0;
 
 /********************************
 	                       ■■  
@@ -72,7 +78,7 @@ double roomba_front_Ypoint;
 	 ■■                        
 	 ■■  
 ***********************************/
-#define SERIAL_PORT_1 "\\\\.\\COM16"
+#define SERIAL_PORT_1 "\\\\.\\COM10"
 
 char buf1[1024];
 char buf2[1024];
@@ -248,7 +254,7 @@ char send_velocity_command(int motL, int motR, int port_in)
 	serial *s=&rb_serial[port_in];
 
 	// sbuf[0]=RB_DRIVE_PWM;//コマンド
-	sbuf[0]=RB_DRIVE;//コマンド
+	sbuf[0]=RB_DRIVE_VELO;//コマンド
 	set_drive_command(sbuf+1,motL,motR);
 	byte=5;
 	s->send(sbuf,byte);
@@ -515,7 +521,7 @@ return 1;
                                                                        ■■ ■      
                                                                         ■■               
 ************************************************/
-double get_odo(FILE *fp ,int port_in)
+double get_odo(FILE *fp ,int port_in, double* xt, double* yt, double* thetat)
 {
     t_after = get_millisec();
 	if(!odo_mode){start_time = t_after;} //最初の時間を取得
@@ -530,10 +536,14 @@ double get_odo(FILE *fp ,int port_in)
 	encode_L_after = get_sensor_2B(43,port_in);
 	encode_R_after = get_sensor_2B(44,port_in);
 
-    encode_L_diff =  encode_L_after - encode_L_before;
-
     encode_L_diff = encode_L_after - encode_L_before;
     encode_R_diff = encode_R_after - encode_R_before;
+
+	if(encode_L_diff < -65000){encode_L_diff = (32768 - encode_L_before) + (encode_L_after -32767);}
+	else if(encode_L_diff > 6500){encode_L_diff = (-encode_L_before -32767) + (encode_L_after - 32768);}
+	
+	if(encode_R_diff < -65000){encode_R_diff = (32768 - encode_R_before) + (encode_R_after -32767);}
+	else if(encode_R_diff > 6500){encode_R_diff = (-encode_R_before -32767) + (encode_R_after - 32768);}
 
     theta_L_diff = 2 * pi * double(encode_L_diff) / 508.8;
     theta_R_diff = 2 * pi * double(encode_R_diff) / 508.8;
@@ -552,20 +562,18 @@ double get_odo(FILE *fp ,int port_in)
 
 	if(odo_mode){
 		theta_t_after = omega_after * t_diff + theta_t_after;
+		if(theta_t_after > pi){theta_t_after = (theta_t_after - pi) -pi;}
+		else if(theta_t_after <= -pi){theta_t_after = pi - (-theta_t_after -pi);}
 		x_t = kyori * cos(theta_t_after) + x_t;
 		y_t = kyori * sin(theta_t_after) + y_t;
-		roomba_front_Xpoint = (roomba_dia / 2000) * cos(theta_t_after) + x_t;
-		roomba_front_Ypoint = (roomba_dia / 2000) * sin(theta_t_after) + y_t;
 	}
-	else{
-	    fprintf( fp , "time[s] , x_t[m] , y_t[m] ,theta[deg]\n");
-	}
+	else if(!odo_mode && memo_mode){fprintf( fp , "time[s] , x_t[m] , y_t[m] ,theta[deg],target_point\n");}
 
 	// printf("now_time = %.2f [s] " , (t_after - start_time)/1000);
-	// printf("enc_L = %d [count] enc_R = %d [count]" , get_sensor_2B(43,port_in) , get_sensor_2B(44,port_in));
-	printf("x_t = %.3f [m] , y_t = %.3f [m] , theta_t_after = %.3f [deg]\n" , x_t , y_t , 180*theta_t_after/pi);
+	// printf("enc_L= %d ,enc_R= %d , " , get_sensor_2B(43,port_in) , get_sensor_2B(44,port_in));
+	// printf("x_t = %.3f [m] , y_t = %.3f [m] , theta_t_after = %.3f [deg]\n" , x_t , y_t , 180*theta_t_after/pi);
 
-	fprintf( fp , "%.2f , %.3f , %.3f , %.3f \n" , (t_after - start_time)/1000 , x_t , y_t , 180*theta_t_after/pi);
+	if(memo_mode){fprintf( fp , "%.2f , %.3f , %.3f , %.3f , %d\n" , (t_after - start_time)/1000 , x_t , y_t , 180*theta_t_after/pi ,target_point);}
 
     t_before = t_after;
     encode_L_before = encode_L_after;
@@ -574,6 +582,10 @@ double get_odo(FILE *fp ,int port_in)
     omega_before = omega_after;
     v_st_before = v_st_after;
 	odo_mode = 1;
+
+	*xt = x_t;
+	*yt = y_t;
+	*thetat = theta_t_after;
 
 	return 1;
 }
@@ -592,8 +604,89 @@ double get_odo(FILE *fp ,int port_in)
                    ■■       ■                              
                  ■■■        ■ 
 ***************************************************************************/
+double way_point(double x ,double y ,double theta ,int* L, int* R){
+	double target_x[] = { 0.5, 0.5, 1.0};
+	double target_y[] = { 0.5,   0,   0};
+	double target_theta;
+	double distance;
 
-int way_point(){}
+	double delta_theta;
+
+	int full_power = 100;
+	int PWM_R;
+	int PWM_L;
+
+	// double th_kp = 4.45;
+	// double th_ki = 0.075;
+	// double th_kd = 0;
+	double th_kp = 1;
+	double th_ki = 0.1;
+	double th_kd = 0;
+	// 各補償の項目についてグラフを出力し比較することができるね（レポート），
+
+	double kp = 0.2;
+	double ki = 0.02;
+
+	target_theta = atan2(target_y[target_point] - y , target_x[target_point] - x);
+	distance = sqrt(pow(target_y[target_point] - y , 2) + pow(target_x[target_point] - x , 2));
+
+	if(distance > 0.05){distance = 0.05;}
+
+	delta_theta = target_theta - theta;
+	if(delta_theta <= -pi){delta_theta = 2 * pi + target_theta - theta;}
+	else if(delta_theta > pi){delta_theta = -2 * pi + target_theta - theta;}
+
+	PWM_L = full_power * (kp * distance * 20 + (1-kp) * delta_theta / pi + ki * sumerror_distance);
+	PWM_R = full_power * (kp * distance * 20 - (1-kp) * delta_theta / pi + ki * sumerror_distance);
+
+	// PWM_L = full_power * (kp *(delta_theta / pi)* distance *20 + (1-kp) * delta_theta / pi + ki * sumerror_distance);
+	// PWM_R = full_power * (kp *(delta_theta / pi)* distance *20 - (1-kp) * delta_theta / pi + ki * sumerror_distance);
+
+	// if(delta_theta < 3*180/pi || delta_theta >-3*180/pi){
+	// 	PWM_L = full_power * (th_kp*delta_theta + th_ki*sumerror_theta + th_kd*erer_theta);
+	// 	PWM_R = -full_power * (th_kp*delta_theta + th_ki*sumerror_theta + th_kd*erer_theta);
+	// }
+	// else{PWM_L=PWM_R=0;}
+
+	if(PWM_L > full_power){PWM_L = full_power;}
+	else if(PWM_L < -full_power){PWM_L = -full_power;}
+	if(PWM_R > full_power){PWM_R = full_power;}
+	else if(PWM_R < -full_power){PWM_R = -full_power;}
+
+	sumerror_distance += distance;
+	sumerror_theta += delta_theta;
+	erer_theta = delta_theta - pre_theta;
+
+	if(distance < 0.01){
+		PWM_L = PWM_R = 0;
+		sumerror_distance = 0;
+		sumerror_theta = 0;
+		erer_theta = 0;
+		target_point++;
+		if(target_point == 3){
+			target_point = 2;
+			return 0;
+		}
+	}
+
+	printf("delta_theta= %.3f ,target_theta= %.3f ,distance= %.3f ,x= %.3f ,y= %.3f ,theta= %.3f ,L= %d ,R= %d target_point= %d\n", 
+		180 * delta_theta / pi, 180 * target_theta / pi
+		// , distance
+		, sqrt(pow(target_y[target_point] - y , 2) + pow(target_x[target_point] - x , 2))
+		,x, y, 180 * theta / pi,
+		PWM_L,PWM_R
+		,target_point
+		// ,kp * distance
+		// ,(1-kp) * delta_theta / pi
+		);
+
+	pre_theta = delta_theta;
+
+	*L = PWM_L;
+	*R = PWM_R;
+
+	return 1;
+}
 
 
 //--------------------------
@@ -696,28 +789,7 @@ void drive_tires(int dir_in)
 
 //-----------------------
 void print_keys(void)
-{
-	printf("---------------------\n");
-	printf("a: START\n");
-	printf("s: STOP\n");
-	printf("d: RESET\n");
-	printf("g: SAFE\n");
-	printf("f: FULL\n");
-	printf("c: clear buffer\n");
-	printf("\n");
-	printf("0: turn right\n");
-	printf("1: go forward\n");
-	printf("2: turn left\n");
-	printf("3: go backward\n");
-	printf("\n");
-	printf("z: get sensor info\n");
-	printf("x: play song\n");
-	printf("i: init sensor\n");
-	printf("v: vacuum on\n");
-	printf("b: vacuum off\n");
-	printf("w: dock\n");
-	printf("---------------------\n");
-}
+{}
 
 //-----------------------
 void keyf(unsigned char key , int x , int y)//一般キー入力
@@ -894,11 +966,15 @@ void key_input(void)
 {
     int key;
     int port=current_control_port;
-	int mode;
+	int wp_mode = 0;
 	int speedL;
 	int speedR;
 	int velocity;
-	int radius;
+	int vel_R;
+	int vel_L;
+	double x;
+	double y;
+	double theta;
 
 	char* string=NULL;
 	filename_make(&string);
@@ -913,74 +989,89 @@ void key_input(void)
 
 	FILE *fp;//csv書き込み
 
-	fp = fopen( fname, "w" );
+	if(memo_mode){fp = fopen( fname, "w" );}
 	
 	if( fp == NULL ){printf( "%sファイルが開けません¥n", fname );}
-    get_odo(fp, port);
+    get_odo(fp, port, &x, &y, &theta);
+
+	int hoge=0;
+	while(hoge <= 120){
+		key = GetAsyncKeyState(hoge);
+		hoge++;
+	}
+
+	printf("start\n");
 
     while(1)
     {		
 		if(GetAsyncKeyState(0x57)) { //Wキー
 			speedL = 120;
 			speedR = 120;
-			velocity = 500;
-			radius = 0;
+			vel_R = 200;
+			vel_L = 200;
 		}
 		else if(GetAsyncKeyState(0x41)) { //Dキー
 			speedL=120;
 			speedR=-120;
-			velocity = 300;
-			radius = 20;
+			vel_L = 200;
+			vel_R = -200;
 		}
 		else if(GetAsyncKeyState(0x44)) { //Aキー
 			speedL=-120;
 			speedR=120;
-			velocity = 300;
-			radius = -20;
+			vel_L = -200;
+			vel_R = 200;
 		}
 		else if(GetAsyncKeyState(0x53)) { //Sキー
 			speedL=-120;
 			speedR=-120;
-			velocity = -500;
-			radius = 0;
+			vel_L = -200;
+			vel_R = -200;
 		}
 		else if(GetAsyncKeyState(0x45)) { //Eキー
 			speedL=120/2;
 			speedR=120;
+
+			vel_L = 200/2;
+			vel_R = 200;
 		}
 		else if(GetAsyncKeyState(0x51)) { //Qキー
 			speedL=120;
 			speedR=120/2;
+			vel_L = 200;
+			vel_R = 200/2;
 		}
 		else if(GetAsyncKeyState(0x43)) { //Cキー
 			speedL=-120/2;
 			speedR=-120;
+			vel_L = -200/2;
+			vel_R = -200;
 		}
 		else if(GetAsyncKeyState(0x5A)) { //Zキー
 			speedL=-120;
 			speedR=-120/2;
+			vel_L = -200;
+			vel_R = -200/2;
 		}
-		else if(GetAsyncKeyState(0x20)){
-			printf("push space");
+		else if(GetAsyncKeyState(0x20)){ //spaceキー
+			wp_mode = 1;
 		}
 		else {
 			speedL=0;
 			speedR=0;
-			velocity = 0;
-			radius = 0;
+			vel_L = 0;
+			vel_R = 0;
 		}
 		sleep_msec(20);
 
-        send_drive_command(speedL,speedR,port);
-		// send_velocity_command(velocity,radius,port);
+		if(wp_mode){way_point(x ,y ,theta ,&speedL ,&speedR);}
 
-		get_odo(fp,port);
+		send_drive_command(speedL,speedR,port);
+		// send_velocity_command(vel_L,vel_R,port);
+		get_odo(fp,port, &x, &y, &theta);
 
-    // printf("keyf() input: ");
-    // key=getchar();
-    // printf("[%c]\n",key);
-    // keyf(key,0,0);
-	// get_odo(port);
+		// printf("x_t = %.3f [m] , y_t = %.3f [m] , theta_t_after = %.3f [deg]\n" , x , y , theta);
+		// printf("L = %d , R = %d , mode = %d\n" , speedL , speedR, mode);
     }
 }
 

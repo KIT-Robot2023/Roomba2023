@@ -15,6 +15,7 @@
 #define RB_DRIVE_PWM 146U //4バイトデータ必要
 #define RB_MOTORS 138U //ブラシ・吸引などの方向指定．1バイトデータ必要
 #define RB_PWM_MOTORS 144U //ブラシ・吸引などの強さ指定．1バイトデータ必要
+#define RB_DRIVE_VELO 145U
 
 #define RB_SENSORS 142U //センサデータ要求．1バイトデータ必要
 

@@ -1,14 +1,15 @@
 # Fdb version 3
-["dvipdf"] 1702335099 "out/mid_rep.dvi" "out/mid_rep.pdf" "out/mid_rep" 1702335101
-  "out/mid_rep.dvi" 1702335099 10296 5de5ba6fa1fd05563a5bf7e914bfe883 "latex"
+["dvipdf"] 1702893593 "out/mid_rep.dvi" "out/mid_rep.pdf" "out/mid_rep" 1702893595
+  "out/mid_rep.dvi" 1702893593 16400 8d62699d45364ed2f77e8a80f8dfb9da "latex"
   (generated)
   "out/mid_rep.pdf"
-["latex"] 1702335097 "c:/Users/atsur/Box/ワァの/KIT/M1後期/制御工学特論/Roomba2023/mid_rep/mid_rep.tex" "out/mid_rep.dvi" "mid_rep" 1702335101
-  "../graph/Rotationvs.Distance.png" 1702332014 21888 09c605440dd836f401a1d2d9d696bfe7 ""
-  "../graph/Velocityvs.Time.png" 1702331948 34470 fafd56ac337fe8fd2fe63c38cf2ff30d ""
-  "../graph/Xvs.Y.png" 1702331994 27666 9ca64ad53f9724d9a38afaaf0844532f ""
-  "c:/Users/atsur/Box/ワァの/KIT/M1後期/制御工学特論/Roomba2023/mid_rep/mid_rep.tex" 1702335096 5969 8c9b4c9e8eb3e59fb0ab2f3cb0a69f63 ""
+["latex"] 1702893591 "c:/Users/atsur/Box/ワァの/KIT/M1後期/制御工学特論/Roomba2023/mid_rep/mid_rep.tex" "out/mid_rep.dvi" "mid_rep" 1702893595
+  "../graph/RotTimturn.eps" 1702706586 66453 0cb394a212d1a961eb2507567fc3c6b0 ""
+  "../graph/Rotationvs.Distance.png" 1702693209 21402 60fc70212ad8eb5e4bb5d006573d4bfa ""
+  "../graph/Xvs.Y.png" 1702693136 25578 91613f86d4d0a99e4628c66a4bea539c ""
+  "c:/Users/atsur/Box/ワァの/KIT/M1後期/制御工学特論/Roomba2023/mid_rep/mid_rep.tex" 1702893590 9447 66ae700ac90aa48e7a1758c1a9e810a2 ""
   "c:/texlive/2022/texmf-dist/fonts/map/fontname/texfonts.map" 1668357143 3524 cb3e574dea2d1052e39280babc910dc8 ""
+  "c:/texlive/2022/texmf-dist/fonts/tfm/jknappen/ec/tcrm1000.tfm" 1668356830 1536 e07581a4bb3136ece9eeb4c3ffab8233 ""
   "c:/texlive/2022/texmf-dist/fonts/tfm/ptex-fonts/jis/jis.tfm" 1668398439 468 53f854284f6afa6c36aaa2d1090ecc12 ""
   "c:/texlive/2022/texmf-dist/fonts/tfm/ptex-fonts/jis/jisg.tfm" 1668398439 468 53f854284f6afa6c36aaa2d1090ecc12 ""
   "c:/texlive/2022/texmf-dist/fonts/tfm/ptex-fonts/standard/tgoth10.tfm" 1668398439 856 7404843a5f798859944d7973a47821d5 ""
@@ -95,9 +96,9 @@
   "c:/texlive/2022/texmf-dist/web2c/texmf.cnf" 1668355570 40171 cdab547de63d26590bebb3baff566530 ""
   "c:/texlive/2022/texmf-var/web2c/eptex/platex.fmt" 1668399839 3072758 1250dd89d6dc8c6c4424d1f94b13601f ""
   "c:/texlive/2022/texmf.cnf" 1668399723 713 e69b156964470283e0530f5060668171 ""
-  "mid_rep.tex" 1702335096 5969 8c9b4c9e8eb3e59fb0ab2f3cb0a69f63 ""
-  "out/mid_rep.aux" 1702335099 2094 ff1f47d817d360536cc9dda628f94bd3 "latex"
-  "out/mid_rep.out" 1702335099 460 f74dde3fca23ed15352b6a3943a0f15c "latex"
+  "mid_rep.tex" 1702893590 9447 66ae700ac90aa48e7a1758c1a9e810a2 ""
+  "out/mid_rep.aux" 1702893593 2552 89edf1ea99ac8eba8b62b8ad12aaf989 "latex"
+  "out/mid_rep.out" 1702893593 670 e25aad5e0f4418641ea5ee4d3c1074c3 "latex"
   (generated)
   "out/mid_rep.aux"
   "out/mid_rep.dvi"
