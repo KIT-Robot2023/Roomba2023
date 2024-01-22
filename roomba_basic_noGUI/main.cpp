@@ -1,10 +1,10 @@
 #include <climits>
+#include <cmath>
 #include <cstdio>
 #include <fstream>
 #include <iomanip>
 #include <sstream>
 #include <thread>
-#include <cmath> 
 
 #include "include/kbhit.hpp"
 #include "include/roomba.hpp"
@@ -40,17 +40,17 @@ int main() {
     }
 
     serial serial;
-    roomba::Command roomba_command(serial, "\\\\.\\COM13");
+    roomba::Command roomba_command(serial, "\\\\.\\COM7");
     diff2_odometry::Diff2OdometryConfig odo_config(508, USHRT_MAX, 0.036, 0.235);
     diff2_odometry::Diff2Odometry odometry(roomba_command, odo_config);
-    pure_pursuit::PurePursuitConfig pure_pursuit_config(0.8, 0.8, 500.0 / 1000, 100 / 1000.0, 10.0 / 1000.0);
+    pure_pursuit::PurePursuitConfig pure_pursuit_config(1.0, 1.0, 500.0 / 1000, 150.0 / 1000.0, 5.0 / 1000.0);
     pure_pursuit::PurePursuit pure_pursuit(pure_pursuit_config);
     roomba::Roomba roomba(roomba_command, odometry, pure_pursuit);
     // path
     pure_pursuit::Path path1;
-    for (float i = 0; i < 3; i += 0.1) {
+    for (float i = 0; i < 2; i += 0.01) {
         const double x = i;
-        const double y = 0.5 * sin(2 * util::pi_d * i);
+        const double y = 0.5 * sin(util::pi_d * i);
         path1.points.push_back(diff2_odometry::Point(x, y));
     }
     pure_pursuit::Path path2;

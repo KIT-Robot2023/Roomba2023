@@ -32,8 +32,8 @@ void Roomba::cycle() {
 
 void Roomba::drive(double left_vel, double right_vel) {
     // if (system_mode == SystemMode::manual) {
-    std::cout << "in drive()\n left[m/s]:  " << left_vel << " right[m/2]: " << right_vel
-              << " left[mm/s]:" << (int)(left_vel * 1000) << " right[mm/s]: " << (int)(right_vel * 1000) << std::endl;
+    // std::cout << "in drive()\n left[m/s]:  " << left_vel << " right[m/2]: " << right_vel
+    //           << " left[mm/s]:" << (int)(left_vel * 1000) << " right[mm/s]: " << (int)(right_vel * 1000) << std::endl;
     command_.send_drive_direct_command((int)(left_vel * 1000), (int)(right_vel * 1000));
     // }
 }
