@@ -74,7 +74,7 @@ private:
     double omega_to_vel_(const double omega) { return omega * config_.wheel_radius; }
     int delta_count_(int dt_count) {
         if (abs(dt_count) >= config_.encoder_count_range / 2) {
-            return util::sign(dt_count) * config_.encoder_count_range - dt_count;
+            return -config_.encoder_count_range * util::sign(dt_count) + dt_count;
         } else {
             return dt_count;
         }
