@@ -6,10 +6,11 @@ import numpy as np
 import math
 import time
 import serial
-import matplotlib as plt
+import matplotlib.pyplot as plt
+#import keyboard
 
 ################################################
-RB_PORT = "COM3"#シリアルポート設定
+RB_PORT = "COM4"#シリアルポート設定
 ################################################
 
 '''ルンバ実機の長さなどの値'''
@@ -128,6 +129,38 @@ def main():
             print("BACK(3)")
             stop_flag = 0
             DrivePWM(ser, -speed,-speed)
+        elif val=='key_ctrl':
+            print("キーボード操作モードです")
+            stop_flag = 0
+            while True:
+                if keyboard.is_pressed('up'):
+                    print("キー '↑'")
+                    DrivePWM(ser, 200,200)
+                    # 'a'キーに対する処理をここに記述
+                elif keyboard.is_pressed('right'):
+                    print("キー '→' ")
+                    DrivePWM(ser, 200,-200)
+                    # 'b'キーに対する処理をここに記述
+                elif keyboard.is_pressed('left'):
+                    print("キー '←' ")
+                    DrivePWM(ser, -200,200)
+                    # 'c'キーに対する処理をここに記述
+                elif keyboard.is_pressed('down'):
+                    print("キー '↓' ")
+                    DrivePWM(ser, -200,-200)
+                    # 'c'キーに対する処理をここに記述
+                elif keyboard.is_pressed('q'):
+                    print("キーボード捜査モード終了")
+                    DrivePWM(ser, -200,200)
+                    #break  # どのキーも押されていなければループを抜ける
+                else:
+                    print("いずれのキーも押されていません。")
+                    DrivePWM(ser, 0,0)
+                    # 'c'キーに対する処理をここに記述
+
+                time.sleep(0.1)  # ループの速度を制御
+
+            DrivePWM(ser, -speed,-speed)
         elif val=='d':
             print("RESET")
             stop_flag = 1
@@ -196,7 +229,7 @@ def main():
             time.sleep(2)  # 2秒待つ
 
             #初期角度と位置を設定
-            sennkai_delta_ang = 0 #初期の角度は2分のパイつまりxy平面でy軸方向を向いている
+            sennkai_delta_ang = (math.pi/2) #初期の角度は2分のパイつまりxy平面でy軸方向を向いている
             Roomba_xpos = 0
             Roomba_ypos = 0
 
@@ -272,7 +305,7 @@ def main():
                 print("time:" + now_time) # 現在の時刻を表示
                 time.sleep(0.2)
 
-        elif val=='st': #直進
+        elif val=='t3': 
             print("Odometry test mode ON!")
             ser.write(bytes([140, 0, 4, 60, 8, 62, 8, 64, 8, 66, 8]))  # オドメトリモード起動音セット　　60と62はノート番号、32は持続時間 つまり，bytesを使えば簡単にシリアルデータを送信できるぞ
             # ここで，140はモード，0は曲の番号（０番目の曲に音をセットする），音を出す数は２音，６０の音を32という時間だけ流す，６２という音を３２という時間だけ流す
@@ -280,13 +313,14 @@ def main():
             time.sleep(2)  # 2秒待つ
 
             #初期角度と位置を設定
-            sennkai_delta_ang = 0 #初期の角度は2分のパイつまりxy平面でy軸方向を向いている
+            sennkai_delta_ang = (math.pi/2) #初期の角度は2分のパイつまりxy平面でy軸方向を向いている
             Roomba_xpos = 0
             Roomba_ypos = 0
 
             #モータを動かす．（まずは直進させてみる）
             print("Go_Straight！！")
             stop_flag = 0
+            DrivePWM(ser, -70,-70)
 
             # まずは最初のエンコーダ値取得，そして開始時間も取得
             # print("get encoder value...")
@@ -295,7 +329,7 @@ def main():
             print("最初のエンコーダの値は:左が"+str(encL_prev)+"で，右が"+str(encL_prev)+"です．時間も取得しました")
 
             start_time = time.time()
-            while time.time() - start_time < 1:  # 現在の時刻と開始時刻の差が5秒未満の間 つまり5秒間ループ処理
+            while time.time() - start_time < 3:  # 現在の時刻と開始時刻の差が5秒未満の間 つまり5秒間ループ処理
                 #モータを動かす．（まずは直進させてみる）
                 print("Go_Straight！！")
                 stop_flag = 0
@@ -321,41 +355,13 @@ def main():
                 vR = move_range_R / delta_t
                 print("L速度:" + str(vL))
                 print("R速度:" + str(vR))
-                rotation_angle_L = ((2*math.pi)/508.8) * delta_encL
-                rotation_angle_R = ((2*math.pi)/508.8) * delta_encR #出たパルス分（delta_encL,R）の回転角度を計算
-                print("角速度L:" + str(rotation_angle_L))
-                print("角速度R:" + str(rotation_angle_R))
-
-                rotational_ang_vel_L = rotation_angle_L / delta_t #単位時間当たりの回転角度を計算すると，角速度が求められる 各タイヤの回転角速度
-                rotational_ang_vel_R = rotation_angle_R / delta_t #
-                Roomba_senkai_speed = (vL - vR)/TREAD #ルンバ自体の回転（旋回）速度を計算 方向は符号で判断可能＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
-                print("旋回角速度ω：" + str(Roomba_senkai_speed))
-                # v_L, v_R 計算
-                L_vel = TIRE_R * rotational_ang_vel_L #角速度に半径をかけると，速度になる（v = rω）
-                R_vel = TIRE_R * rotational_ang_vel_R
-                Roomba_speed = (L_vel + R_vel)/2 # 並進速度(左右の速度の平均) つまりルンバ自体の速度となる＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
-                Roomba_senkai_speed = (L_vel - R_vel)/TREAD #ルンバ自体の回転（旋回）速度を計算 方向は符号で判断可能＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
-
-                #あとは，微笑時間ごとにルンバの速度と旋回から，進んだ方向と長さを計算して足していけばよい！（厳密な積分ではなく離散積分になるので，リーマン和という）
-                #まずはルンバの向きを算出し，微笑時間ごとの角度変化を累積していくことで現在のルンバの向き情報を取得する．
-                # ルンバの向きは，微小時間の旋回速度の旋回の和より， (距離＝速度×時間)を使って，方向の変化を求める．そして足していく
-                sennkai_delta_ang += Roomba_senkai_speed * delta_t #Δtを使った離散積分で（θ，x，y）を更新
-                print("ルンバの角度："+str(math.degrees(sennkai_delta_ang))+"度  （x座標軸から）")
-                #ルンバ自体の速度の情報から移動距離を計算できるので，微笑時間ごとの移動距離を計算して足しこんでいく．そして向きの情報から，cosとsinを使って，x軸方向の移動距離とy軸方向の移動距離を計算して累積していくことで移動した座標が推定できる（尾止め鳥）
-                Roomba_xpos += Roomba_speed * math.cos(sennkai_delta_ang) * delta_t #ルンバの速度のx成分を微小時間ごとに足しこんて累積していくことでx座標の微小区間の移動距離を取得
-                Roomba_ypos += Roomba_speed * math.sin(sennkai_delta_ang) * delta_t #ルンバの速度のy成分を微小時間ごとに足しこんて累積していくことでx座標の微小区間の移動距離を取得
-
-                print("ルンバのｘ座標：" + str(Roomba_xpos))
-                print("ルンバのｙ座標：" + str(Roomba_ypos))
-                # print("L速度:" + str(L_vel))
-                # print("R速度:" + str(R_vel))
 
                 encL_prev = encL
                 encR_prev = encR
                 t_prev = now_time
             DrivePWM(ser, 0,0)
 
-        elif val=='tr':  #その場旋回
+        elif val=='t4': 
             print("Odometry test mode ON!")
             ser.write(bytes([140, 0, 4, 60, 8, 62, 8, 64, 8, 66, 8]))  # オドメトリモード起動音セット　　60と62はノート番号、32は持続時間 つまり，bytesを使えば簡単にシリアルデータを送信できるぞ
             # ここで，140はモード，0は曲の番号（０番目の曲に音をセットする），音を出す数は２音，６０の音を32という時間だけ流す，６２という音を３２という時間だけ流す
@@ -363,13 +369,14 @@ def main():
             time.sleep(2)  # 2秒待つ
 
             #初期角度と位置を設定
-            sennkai_delta_ang = 0 #初期の角度は2分のパイつまりxy平面でy軸方向を向いている
+            sennkai_delta_ang = (math.pi/2) #初期の角度は2分のパイつまりxy平面でy軸方向を向いている
             Roomba_xpos = 0
             Roomba_ypos = 0
 
             #モータを動かす．（まずは直進させてみる）
             print("kaiten")
             stop_flag = 0
+            DrivePWM(ser, 70,-70)
 
             # まずは最初のエンコーダ値取得，そして開始時間も取得
             # print("get encoder value...")
@@ -379,10 +386,10 @@ def main():
 
             start_time = time.time()
             while time.time() - start_time < 3:  # 現在の時刻と開始時刻の差が5秒未満の間 つまり5秒間ループ処理
-                #モータを動かす．（まずは直進させてみる）
-                print("Go_Straight！！")
+                #モータを動かす.
+                print("Go！！")
                 stop_flag = 0
-                DrivePWM(ser, -70,70)
+                DrivePWM(ser, 70,-70)
                 time.sleep(0.2) # 一定時間待機
                 encL, encR = GetEncs(ser) # 左右のエンコーダの値再び取得
                 now_time = time.time() # 現在の時刻を取得
@@ -400,136 +407,41 @@ def main():
                 move_range_L = ((2*math.pi*TIRE_R)/508.8) * delta_encL
                 move_range_R = ((2*math.pi*TIRE_R)/508.8) * delta_encR #各タイヤの移動量を，エンコーダの値の差から算出
 
-                vL = move_range_L / delta_t
+                vL = move_range_L / delta_t #タイヤの移動量を時間で割ることで，速度を求める
                 vR = move_range_R / delta_t
-                print("L速度:" + str(vL))
-                print("R速度:" + str(vR))
+                print("Lタイヤの速度:" + str(vL) + "mm/s")
+                print("Rタイヤの速度:" + str(vR) + "mm/s")
 
 
                 rotation_angle_L = ((2*math.pi)/508.8) * delta_encL
                 rotation_angle_R = ((2*math.pi)/508.8) * delta_encR #出たパルス分（delta_encL,R）の回転角度を計算
-                print("角速度L:" + str(rotation_angle_L))
-                print("角速度R:" + str(rotation_angle_R))
+                print("Lタイヤの角速度:" + str(rotation_angle_L))
+                print("Rタイヤの角速度:" + str(rotation_angle_R))
 
                 rotational_ang_vel_L = rotation_angle_L / delta_t #単位時間当たりの回転角度を計算すると，角速度が求められる 各タイヤの回転角速度
                 rotational_ang_vel_R = rotation_angle_R / delta_t #
                 Roomba_senkai_speed = (vL - vR)/TREAD #ルンバ自体の回転（旋回）速度を計算 方向は符号で判断可能＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
-                print("旋回角速度ω：" + str(Roomba_senkai_speed))
+                print("ルンバの旋回角速度ω：" + str(math.degrees(Roomba_senkai_speed)) + "度/秒")
                 # v_L, v_R 計算
                 L_vel = TIRE_R * rotational_ang_vel_L #角速度に半径をかけると，速度になる（v = rω）
                 R_vel = TIRE_R * rotational_ang_vel_R
-                Roomba_speed = (L_vel + R_vel)/2 # 並進速度(左右の速度の平均) つまりルンバ自体の速度となる＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
-                Roomba_senkai_speed = (L_vel - R_vel)/TREAD #ルンバ自体の回転（旋回）速度を計算 方向は符号で判断可能＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
-
-                #あとは，微笑時間ごとにルンバの速度と旋回から，進んだ方向と長さを計算して足していけばよい！（厳密な積分ではなく離散積分になるので，リーマン和という）
-                #まずはルンバの向きを算出し，微笑時間ごとの角度変化を累積していくことで現在のルンバの向き情報を取得する．
-                # ルンバの向きは，微小時間の旋回速度の旋回の和より， (距離＝速度×時間)を使って，方向の変化を求める．そして足していく
-                sennkai_delta_ang += Roomba_senkai_speed * delta_t #Δtを使った離散積分で（θ，x，y）を更新
-                print("ルンバの角度："+str(math.degrees(sennkai_delta_ang))+"度  （x座標軸から）")
-                #ルンバ自体の速度の情報から移動距離を計算できるので，微笑時間ごとの移動距離を計算して足しこんでいく．そして向きの情報から，cosとsinを使って，x軸方向の移動距離とy軸方向の移動距離を計算して累積していくことで移動した座標が推定できる（尾止め鳥）
-                Roomba_xpos += Roomba_speed * math.cos(sennkai_delta_ang) * delta_t #ルンバの速度のx成分を微小時間ごとに足しこんて累積していくことでx座標の微小区間の移動距離を取得
-                Roomba_ypos += Roomba_speed * math.sin(sennkai_delta_ang) * delta_t #ルンバの速度のy成分を微小時間ごとに足しこんて累積していくことでx座標の微小区間の移動距離を取得
-
-                print("ルンバのｘ座標：" + str(Roomba_xpos))
-                print("ルンバのｙ座標：" + str(Roomba_ypos))
                 # print("L速度:" + str(L_vel))
                 # print("R速度:" + str(R_vel))
                 encL_prev = encL
                 encR_prev = encR
                 t_prev = now_time
             DrivePWM(ser, 0,0)
-        
-        elif val=='dif':  #左右差
-            print("Odometry test mode ON!")
-
-            ser.write(bytes([140, 0, 4, 60, 8, 62, 8, 64, 8, 66, 8]))  # オドメトリモード起動音セット　　60と62はノート番号、32は持続時間 つまり，bytesを使えば簡単にシリアルデータを送信できるぞ
-            # ここで，140はモード，0は曲の番号（０番目の曲に音をセットする），音を出す数は２音，６０の音を32という時間だけ流す，６２という音を３２という時間だけ流す
-            play_song(ser, 0) #オドメトリ起動音再生
-            time.sleep(2)  # 2秒待つ
-
-            #初期角度と位置を設定
-            sennkai_delta_ang = 0 #初期の角度は2分のパイつまりxy平面でy軸方向を向いている
-            Roomba_xpos = 0
-            Roomba_ypos = 0
-
-            #モータを動かす．（まずは直進させてみる）
-            print("Go_Straight！！")
-            stop_flag = 0
-
-            # まずは最初のエンコーダ値取得，そして開始時間も取得
-            # print("get encoder value...")
-            encL_prev, encR_prev = GetEncs(ser) # 左右のエンコーダの値取得
-            t_prev = time.time() # プログラムの実行開始時刻を取得 time.time()は，システムが起動してから何秒経ったかを取得してくれる関数　よってこれを引き算することで経過時間（秒）を得られる
-            print("最初のエンコーダの値は:左が"+str(encL_prev)+"で，右が"+str(encL_prev)+"です．時間も取得しました")
-
-            start_time = time.time()
-            while time.time() - start_time < 3:  # 現在の時刻と開始時刻の差が5秒未満の間 つまり5秒間ループ処理
-                #モータを動かす．（まずは直進させてみる）
-                print("Go_Straight！！")
-                stop_flag = 0
-                DrivePWM(ser, 70,100)
-                time.sleep(0.2) # 一定時間待機
-    
-                encL, encR = GetEncs(ser) # 左右のエンコーダの値再び取得
-                now_time = time.time() # 現在の時刻を取得
-
-                #微小区間の値を取得
-                delta_encL = encL_prev - encL
-                delta_encR = encR_prev - encR #エンコーダの値の差を取る
-                #(＃＃＃＃＃＃65535繰り上げ処理＃＃＃＃＃＃＃＃＃＃＃＃)
-                print("ΔencL:" + str(delta_encL))
-                print("ΔencR:" + str(delta_encR))
-                delta_t = t_prev - now_time #経過時間（秒）を取得
-                print("Δt:" + str(delta_t))
-
-                #計算
-                move_range_L = ((2*math.pi*TIRE_R)/508.8) * delta_encL
-                move_range_R = ((2*math.pi*TIRE_R)/508.8) * delta_encR #各タイヤの移動量を，エンコーダの値の差から算出
-
-                vL = move_range_L / delta_t
-                vR = move_range_R / delta_t
-                print("L速度:" + str(vL))
-                print("R速度:" + str(vR))
-
-                rotation_angle_L = ((2*math.pi)/508.8) * delta_encL
-                rotation_angle_R = ((2*math.pi)/508.8) * delta_encR #出たパルス分（delta_encL,R）の回転角度を計算
-                print("角速度L:" + str(rotation_angle_L))
-                print("角速度R:" + str(rotation_angle_R))
-
-                rotational_ang_vel_L = rotation_angle_L / delta_t #単位時間当たりの回転角度を計算すると，角速度が求められる 各タイヤの回転角速度
-                rotational_ang_vel_R = rotation_angle_R / delta_t #
-                Roomba_senkai_speed = (vL - vR)/TREAD #ルンバ自体の回転（旋回）速度を計算 方向は符号で判断可能＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
-                print("旋回角速度ω：" + str(Roomba_senkai_speed))
-                # v_L, v_R 計算
-                L_vel = TIRE_R * rotational_ang_vel_L #角速度に半径をかけると，速度になる（v = rω）
-                R_vel = TIRE_R * rotational_ang_vel_R
-                Roomba_speed = (L_vel + R_vel)/2 # 並進速度(左右の速度の平均) つまりルンバ自体の速度となる＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
-                Roomba_senkai_speed = (L_vel - R_vel)/TREAD #ルンバ自体の回転（旋回）速度を計算 方向は符号で判断可能＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
-
-                #あとは，微笑時間ごとにルンバの速度と旋回から，進んだ方向と長さを計算して足していけばよい！（厳密な積分ではなく離散積分になるので，リーマン和という）
-                #まずはルンバの向きを算出し，微笑時間ごとの角度変化を累積していくことで現在のルンバの向き情報を取得する．
-                # ルンバの向きは，微小時間の旋回速度の旋回の和より， (距離＝速度×時間)を使って，方向の変化を求める．そして足していく
-                sennkai_delta_ang += Roomba_senkai_speed * delta_t #Δtを使った離散積分で（θ，x，y）を更新
-                print("ルンバの角度："+str(math.degrees(sennkai_delta_ang))+"度  （x座標軸から）")
-                #ルンバ自体の速度の情報から移動距離を計算できるので，微笑時間ごとの移動距離を計算して足しこんでいく．そして向きの情報から，cosとsinを使って，x軸方向の移動距離とy軸方向の移動距離を計算して累積していくことで移動した座標が推定できる（尾止め鳥）
-                Roomba_xpos += Roomba_speed * math.cos(sennkai_delta_ang) * delta_t #ルンバの速度のx成分を微小時間ごとに足しこんて累積していくことでx座標の微小区間の移動距離を取得
-                Roomba_ypos += Roomba_speed * math.sin(sennkai_delta_ang) * delta_t #ルンバの速度のy成分を微小時間ごとに足しこんて累積していくことでx座標の微小区間の移動距離を取得
-
-                print("ルンバのｘ座標：" + str(Roomba_xpos))
-                print("ルンバのｙ座標：" + str(Roomba_ypos))
 
 
-                encL_prev = encL
-                encR_prev = encR
-                t_prev = now_time
-            DrivePWM(ser, 0,0)
 
-        elif val=='all':  #組み合わせ
+
+
+        elif val=='t5':  #左右差
             print("Odometry test mode ON!")
             ser.write(bytes([140, 0, 4, 60,8, 62,8, 64,8, 66,8]))  # オドメトリモード起動音セット　　60と62はノート番号、32は持続時間 つまり，bytesを使えば簡単にシリアルデータを送信できるぞ
             # ここで，140はモード，0は曲の番号（０番目の曲に音をセットする），音を出す数は２音，６０の音を32という時間だけ流す，６２という音を３２という時間だけ流す
             play_song(ser, 0) #オドメトリ起動音再生
-            time.sleep(2)  # 2秒待つ
+            time.sleep(0.1)  # 2秒待つ
 
             #初期角度と位置を設定
             sennkai_delta_ang = 0 #初期の角度は2分のパイつまりxy平面でy軸方向を向いている
@@ -541,13 +453,13 @@ def main():
             # print("get encoder value...")
             encL_prev, encR_prev = GetEncs(ser) # 左右のエンコーダの値取得
             t_prev = time.time() # プログラムの実行開始時刻を取得 time.time()は，システムが起動してから何秒経ったかを取得してくれる関数　よってこれを引き算することで経過時間（秒）を得られる
-            print("最初のエンコーダの値は:左が"+str(encL_prev)+"で，右が"+str(encL_prev)+"です．時間も取得しました 変数準備完了")
+            print("1/3・直進 最初のエンコーダの値は:左が"+str(encL_prev)+"で，右が"+str(encL_prev)+"1/3・直進")
 
 
             start_time = time.time()
-            while time.time() - start_time < 1:  # 現在の時刻と開始時刻の差が5秒未満の間 つまり5秒間ループ処理
+            while time.time() - start_time < 2:  # 現在の時刻と開始時刻の差が5秒未満の間 つまり5秒間ループ処理
                 #モータを動かす．（まずは直進させてみる）
-                print("Go_Straight！！")
+                # print("Go_Straight！！")
                 stop_flag = 0
                 DrivePWM(ser, 70,70)
     
@@ -558,10 +470,10 @@ def main():
                 delta_encL = encL_prev - encL
                 delta_encR = encR_prev - encR #エンコーダの値の差を取る
                 #(＃＃＃＃＃＃65535繰り上げ処理＃＃＃＃＃＃＃＃＃＃＃＃)
-                print("ΔencL:" + str(delta_encL))
-                print("ΔencR:" + str(delta_encR))
+                # print("ΔencL:" + str(delta_encL))
+                # print("ΔencR:" + str(delta_encR))
                 delta_t = t_prev - now_time #経過時間（秒）を取得
-                print("Δt:" + str(delta_t))
+                # print("Δt:" + str(delta_t))
 
                 #計算
                 move_range_L = ((2*math.pi*TIRE_R)/508.8) * delta_encL
@@ -569,18 +481,18 @@ def main():
 
                 vL = move_range_L / delta_t
                 vR = move_range_R / delta_t
-                print("L速度:" + str(vL))
-                print("R速度:" + str(vR))
+                # print("L速度:" + str(vL))
+                # print("R速度:" + str(vR))
 
                 rotation_angle_L = ((2*math.pi)/508.8) * delta_encL
                 rotation_angle_R = ((2*math.pi)/508.8) * delta_encR #出たパルス分（delta_encL,R）の回転角度を計算
-                print("角速度L:" + str(rotation_angle_L))
-                print("角速度R:" + str(rotation_angle_R))
+                # print("角速度L:" + str(rotation_angle_L))
+                # print("角速度R:" + str(rotation_angle_R))
 
                 rotational_ang_vel_L = rotation_angle_L / delta_t #単位時間当たりの回転角度を計算すると，角速度が求められる 各タイヤの回転角速度
                 rotational_ang_vel_R = rotation_angle_R / delta_t #
                 Roomba_senkai_speed = (vL - vR)/TREAD #ルンバ自体の回転（旋回）速度を計算 方向は符号で判断可能＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
-                print("旋回角速度ω：" + str(Roomba_senkai_speed))
+                # print("旋回角速度ω：" + str(Roomba_senkai_speed) + "[rad/s]")
                 # v_L, v_R 計算
                 L_vel = TIRE_R * rotational_ang_vel_L #角速度に半径をかけると，速度になる（v = rω）
                 R_vel = TIRE_R * rotational_ang_vel_R
@@ -591,23 +503,24 @@ def main():
                 #まずはルンバの向きを算出し，微笑時間ごとの角度変化を累積していくことで現在のルンバの向き情報を取得する．
                 # ルンバの向きは，微小時間の旋回速度の旋回の和より， (距離＝速度×時間)を使って，方向の変化を求める．そして足していく
                 sennkai_delta_ang += Roomba_senkai_speed * delta_t #Δtを使った離散積分で（θ，x，y）を更新
-                print("ルンバの角度："+str(math.degrees(sennkai_delta_ang))+"度  （x座標軸から）")
+                # print("ルンバの角度："+str(math.degrees(sennkai_delta_ang))+"度  （x座標軸から）")
                 #ルンバ自体の速度の情報から移動距離を計算できるので，微笑時間ごとの移動距離を計算して足しこんでいく．そして向きの情報から，cosとsinを使って，x軸方向の移動距離とy軸方向の移動距離を計算して累積していくことで移動した座標が推定できる（尾止め鳥）
                 Roomba_xpos += Roomba_speed * math.cos(sennkai_delta_ang) * delta_t #ルンバの速度のx成分を微小時間ごとに足しこんて累積していくことでx座標の微小区間の移動距離を取得
                 Roomba_ypos += Roomba_speed * math.sin(sennkai_delta_ang) * delta_t #ルンバの速度のy成分を微小時間ごとに足しこんて累積していくことでx座標の微小区間の移動距離を取得
 
-                print("ルンバのｘ座標：" + str(Roomba_xpos))
-                print("ルンバのｙ座標：" + str(Roomba_ypos))
+                # print("ルンバのｘ座標：" + str(Roomba_xpos))
+                # print("ルンバのｙ座標：" + str(Roomba_ypos))
 
 
                 encL_prev = encL
                 encR_prev = encR
                 t_prev = now_time
+                print(str(-Roomba_xpos),str(-Roomba_ypos),str(math.degrees(sennkai_delta_ang)))
 
             start_time = time.time()
-            while time.time() - start_time < 1:  # 現在の時刻と開始時刻の差が5秒未満の間 つまり5秒間ループ処理
+            while time.time() - start_time < 2:  # 現在の時刻と開始時刻の差が5秒未満の間 つまり5秒間ループ処理
                 #モータを動かす．（まずは直進させてみる）
-                print("Go_Straight！！")
+                print("2/3 その場旋回")
                 stop_flag = 0
                 DrivePWM(ser, -70,70)
     
@@ -618,10 +531,10 @@ def main():
                 delta_encL = encL_prev - encL
                 delta_encR = encR_prev - encR #エンコーダの値の差を取る
                 #(＃＃＃＃＃＃65535繰り上げ処理＃＃＃＃＃＃＃＃＃＃＃＃)
-                print("ΔencL:" + str(delta_encL))
-                print("ΔencR:" + str(delta_encR))
+                # print("ΔencL:" + str(delta_encL))
+                # print("ΔencR:" + str(delta_encR))
                 delta_t = t_prev - now_time #経過時間（秒）を取得
-                print("Δt:" + str(delta_t))
+                # print("Δt:" + str(delta_t))
 
                 #計算
                 move_range_L = ((2*math.pi*TIRE_R)/508.8) * delta_encL
@@ -629,18 +542,18 @@ def main():
 
                 vL = move_range_L / delta_t
                 vR = move_range_R / delta_t
-                print("L速度:" + str(vL))
-                print("R速度:" + str(vR))
+                # print("L速度:" + str(vL))
+                # print("R速度:" + str(vR))
 
                 rotation_angle_L = ((2*math.pi)/508.8) * delta_encL
                 rotation_angle_R = ((2*math.pi)/508.8) * delta_encR #出たパルス分（delta_encL,R）の回転角度を計算
-                print("角速度L:" + str(rotation_angle_L))
-                print("角速度R:" + str(rotation_angle_R))
+                # print("角速度L:" + str(rotation_angle_L))
+                # print("角速度R:" + str(rotation_angle_R))
 
                 rotational_ang_vel_L = rotation_angle_L / delta_t #単位時間当たりの回転角度を計算すると，角速度が求められる 各タイヤの回転角速度
                 rotational_ang_vel_R = rotation_angle_R / delta_t #
                 Roomba_senkai_speed = (vL - vR)/TREAD #ルンバ自体の回転（旋回）速度を計算 方向は符号で判断可能＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
-                print("旋回角速度ω：" + str(Roomba_senkai_speed))
+                # print("旋回角速度ω：" + str(Roomba_senkai_speed))
                 # v_L, v_R 計算
                 L_vel = TIRE_R * rotational_ang_vel_L #角速度に半径をかけると，速度になる（v = rω）
                 R_vel = TIRE_R * rotational_ang_vel_R
@@ -651,23 +564,24 @@ def main():
                 #まずはルンバの向きを算出し，微笑時間ごとの角度変化を累積していくことで現在のルンバの向き情報を取得する．
                 # ルンバの向きは，微小時間の旋回速度の旋回の和より， (距離＝速度×時間)を使って，方向の変化を求める．そして足していく
                 sennkai_delta_ang += Roomba_senkai_speed * delta_t #Δtを使った離散積分で（θ，x，y）を更新
-                print("ルンバの角度："+str(math.degrees(sennkai_delta_ang))+"度  （x座標軸から）")
+                # print("ルンバの角度："+str(math.degrees(sennkai_delta_ang))+"度  （x座標軸から）")
                 #ルンバ自体の速度の情報から移動距離を計算できるので，微笑時間ごとの移動距離を計算して足しこんでいく．そして向きの情報から，cosとsinを使って，x軸方向の移動距離とy軸方向の移動距離を計算して累積していくことで移動した座標が推定できる（尾止め鳥）
                 Roomba_xpos += Roomba_speed * math.cos(sennkai_delta_ang) * delta_t #ルンバの速度のx成分を微小時間ごとに足しこんて累積していくことでx座標の微小区間の移動距離を取得
                 Roomba_ypos += Roomba_speed * math.sin(sennkai_delta_ang) * delta_t #ルンバの速度のy成分を微小時間ごとに足しこんて累積していくことでx座標の微小区間の移動距離を取得
 
-                print("ルンバのｘ座標：" + str(Roomba_xpos))
-                print("ルンバのｙ座標：" + str(Roomba_ypos))
+                # print("ルンバのｘ座標：" + str(Roomba_xpos))
+                # print("ルンバのｙ座標：" + str(Roomba_ypos))
 
 
                 encL_prev = encL
                 encR_prev = encR
                 t_prev = now_time
+                print(str(-Roomba_xpos),str(-Roomba_ypos),str(math.degrees(sennkai_delta_ang)))
 
             start_time = time.time()
-            while time.time() - start_time < 1:  # 現在の時刻と開始時刻の差が5秒未満の間 つまり5秒間ループ処理
+            while time.time() - start_time < 2:  # 現在の時刻と開始時刻の差が5秒未満の間 つまり5秒間ループ処理
                 #モータを動かす．（まずは直進させてみる）
-                print("Go_Straight！！")
+                print("3/3直進")
                 stop_flag = 0
                 DrivePWM(ser, 70,70)
     
@@ -678,10 +592,10 @@ def main():
                 delta_encL = encL_prev - encL
                 delta_encR = encR_prev - encR #エンコーダの値の差を取る
                 #(＃＃＃＃＃＃65535繰り上げ処理＃＃＃＃＃＃＃＃＃＃＃＃)
-                print("ΔencL:" + str(delta_encL))
-                print("ΔencR:" + str(delta_encR))
+                # print("ΔencL:" + str(delta_encL))
+                # print("ΔencR:" + str(delta_encR))
                 delta_t = t_prev - now_time #経過時間（秒）を取得
-                print("Δt:" + str(delta_t))
+                # print("Δt:" + str(delta_t))
 
                 #計算
                 move_range_L = ((2*math.pi*TIRE_R)/508.8) * delta_encL
@@ -689,18 +603,18 @@ def main():
 
                 vL = move_range_L / delta_t
                 vR = move_range_R / delta_t
-                print("L速度:" + str(vL))
-                print("R速度:" + str(vR))
+                # print("L速度:" + str(vL))
+                # print("R速度:" + str(vR))
 
                 rotation_angle_L = ((2*math.pi)/508.8) * delta_encL
                 rotation_angle_R = ((2*math.pi)/508.8) * delta_encR #出たパルス分（delta_encL,R）の回転角度を計算
-                print("角速度L:" + str(rotation_angle_L))
-                print("角速度R:" + str(rotation_angle_R))
+                # print("角速度L:" + str(rotation_angle_L))
+                # print("角速度R:" + str(rotation_angle_R))
 
                 rotational_ang_vel_L = rotation_angle_L / delta_t #単位時間当たりの回転角度を計算すると，角速度が求められる 各タイヤの回転角速度
                 rotational_ang_vel_R = rotation_angle_R / delta_t #
                 Roomba_senkai_speed = (vL - vR)/TREAD #ルンバ自体の回転（旋回）速度を計算 方向は符号で判断可能＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
-                print("旋回角速度ω：" + str(Roomba_senkai_speed))
+                # print("旋回角速度ω：" + str(Roomba_senkai_speed))
                 # v_L, v_R 計算
                 L_vel = TIRE_R * rotational_ang_vel_L #角速度に半径をかけると，速度になる（v = rω）
                 R_vel = TIRE_R * rotational_ang_vel_R
@@ -711,24 +625,791 @@ def main():
                 #まずはルンバの向きを算出し，微笑時間ごとの角度変化を累積していくことで現在のルンバの向き情報を取得する．
                 # ルンバの向きは，微小時間の旋回速度の旋回の和より， (距離＝速度×時間)を使って，方向の変化を求める．そして足していく
                 sennkai_delta_ang += Roomba_senkai_speed * delta_t #Δtを使った離散積分で（θ，x，y）を更新
-                print("ルンバの角度："+str(math.degrees(sennkai_delta_ang))+"度  （x座標軸から）")
+                # print("ルンバの角度："+str(math.degrees(sennkai_delta_ang))+"度  （x座標軸から）")
                 #ルンバ自体の速度の情報から移動距離を計算できるので，微笑時間ごとの移動距離を計算して足しこんでいく．そして向きの情報から，cosとsinを使って，x軸方向の移動距離とy軸方向の移動距離を計算して累積していくことで移動した座標が推定できる（尾止め鳥）
                 Roomba_xpos += Roomba_speed * math.cos(sennkai_delta_ang) * delta_t #ルンバの速度のx成分を微小時間ごとに足しこんて累積していくことでx座標の微小区間の移動距離を取得
                 Roomba_ypos += Roomba_speed * math.sin(sennkai_delta_ang) * delta_t #ルンバの速度のy成分を微小時間ごとに足しこんて累積していくことでx座標の微小区間の移動距離を取得
 
-                print("ルンバのｘ座標：" + str(Roomba_xpos))
-                print("ルンバのｙ座標：" + str(Roomba_ypos))
+                # print("ルンバのｘ座標：" + str(Roomba_xpos))
+                # print("ルンバのｙ座標：" + str(Roomba_ypos))
 
 
                 encL_prev = encL
                 encR_prev = encR
                 t_prev = now_time
+                print(str(-Roomba_xpos),str(-Roomba_ypos),str(math.degrees(sennkai_delta_ang)))
             DrivePWM(ser, 0,0)
-        # elif
 
 
 
 
+
+
+##################################################################################################################################################################
+        elif val=='test_st':  #kouzi
+            ser.write(bytes([140, 0, 4, 60,8, 62,8, 64,8, 66,8]))  # オドメトリモード起動音セット　　60と62はノート番号、32は持続時間 つまり，bytesを使えば簡単にシリアルデータを送信できるぞ
+            # ここで，140はモード，0は曲の番号（０番目の曲に音をセットする），音を出す数は２音，６０の音を32という時間だけ流す，６２という音を３２という時間だけ流す
+            play_song(ser, 0) #オドメトリ起動音再生
+            time.sleep(0.1)  # 2秒待つ
+
+            #初期角度と位置を設定
+            sennkai_delta_ang = 0 #初期の角度は2分のパイつまりxy平面でy軸方向を向いている
+            Roomba_xpos = 0
+            Roomba_ypos = 0
+
+
+            # まずは最初のエンコーダ値取得，そして開始時間も取得
+            # print("get encoder value...")
+            encL_prev, encR_prev = GetEncs(ser) # 左右のエンコーダの値取得
+            t_prev = time.time() # プログラムの実行開始時刻を取得 time.time()は，システムが起動してから何秒経ったかを取得してくれる関数　よってこれを引き算することで経過時間（秒）を得られる
+            print("直進 最初enc値は:左が"+str(encL_prev)+"で，右が"+str(encL_prev)+"です．時間も取得しました ")
+
+
+            start_time = time.time()
+            while time.time() - start_time < 1:  # 現在の時刻と開始時刻の差が3秒未満の間 つまり3秒間ループ処理
+                #モータを動かす．（まずは直進させてみる）
+                # print("Go_Straight！！")
+                stop_flag = 0
+                DrivePWM(ser, 70,70)
+    
+                encL, encR = GetEncs(ser) # 左右のエンコーダの今の値再び取得
+                now_time = time.time() # 現在の時刻を取得
+
+                #微小区間の値を取得
+                delta_encL = encL_prev - encL
+                delta_encR = encR_prev - encR #エンコーダの値の差を取る
+                #(＃＃＃＃＃＃65535繰り上げ処理未実装＃＃＃＃＃＃＃＃＃＃＃＃)
+                # print("ΔencL:" + str(delta_encL))
+                # print("ΔencR:" + str(delta_encR))
+                delta_t = t_prev - now_time #経過時間（秒）を取得
+                # print("Δt:" + str(delta_t))
+
+                #計算
+                move_range_L = ((2*math.pi*TIRE_R)/508.8) * delta_encL
+                move_range_R = ((2*math.pi*TIRE_R)/508.8) * delta_encR #各タイヤの移動量を，エンコーダの値の差から算出
+
+                vL = move_range_L / delta_t
+                vR = move_range_R / delta_t
+                # print("L速度:" + str(vL))
+                # print("R速度:" + str(vR))
+
+                rotation_angle_L = ((2*math.pi)/508.8) * delta_encL
+                rotation_angle_R = ((2*math.pi)/508.8) * delta_encR #出たパルス分（delta_encL,R）の回転角度を計算
+                # print("角速度L:" + str(rotation_angle_L))
+                # print("角速度R:" + str(rotation_angle_R))
+
+                rotational_ang_vel_L = rotation_angle_L / delta_t #単位時間当たりの回転角度を計算すると，角速度が求められる 各タイヤの回転角速度
+                rotational_ang_vel_R = rotation_angle_R / delta_t #
+                Roomba_senkai_speed = (vL - vR)/TREAD #ルンバ自体の回転（旋回）速度を計算 方向は符号で判断可能＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
+                # print("旋回角速度ω：" + str(Roomba_senkai_speed))
+                # v_L, v_R 計算
+                L_vel = TIRE_R * rotational_ang_vel_L #角速度に半径をかけると，速度になる（v = rω）
+                R_vel = TIRE_R * rotational_ang_vel_R
+                Roomba_speed = (L_vel + R_vel)/2 # 並進速度(左右の速度の平均) つまりルンバ自体の速度となる＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
+                Roomba_senkai_speed = (L_vel - R_vel)/TREAD #ルンバ自体の回転（旋回）速度を計算 方向は符号で判断可能＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
+
+                #あとは，微笑時間ごとにルンバの速度と旋回から，進んだ方向と長さを計算して足していけばよい！（厳密な積分ではなく離散積分になるので，リーマン和という）
+                #まずはルンバの向きを算出し，微笑時間ごとの角度変化を累積していくことで現在のルンバの向き情報を取得する．
+                # ルンバの向きは，微小時間の旋回速度の旋回の和より， (距離＝速度×時間)を使って，方向の変化を求める．そして足していく
+                sennkai_delta_ang += Roomba_senkai_speed * delta_t #Δtを使った離散積分で（θ，x，y）を更新
+                # print("ルンバの角度："+str(math.degrees(sennkai_delta_ang))+"度  （x座標軸から）")
+                #ルンバ自体の速度の情報から移動距離を計算できるので，微笑時間ごとの移動距離を計算して足しこんでいく．そして向きの情報から，cosとsinを使って，x軸方向の移動距離とy軸方向の移動距離を計算して累積していくことで移動した座標が推定できる（尾止め鳥）
+                Roomba_xpos += Roomba_speed * math.cos(sennkai_delta_ang) * delta_t #ルンバの速度のx成分を微小時間ごとに足しこんて累積していくことでx座標の微小区間の移動距離を取得
+                Roomba_ypos += Roomba_speed * math.sin(sennkai_delta_ang) * delta_t #ルンバの速度のy成分を微小時間ごとに足しこんて累積していくことでx座標の微小区間の移動距離を取得
+
+                # print("ルンバのｘ座標：" + str(Roomba_xpos))
+                # print("ルンバのｙ座標：" + str(Roomba_ypos))
+
+
+                encL_prev = encL
+                encR_prev = encR
+                t_prev = now_time
+                print(str(-Roomba_xpos),str(-Roomba_ypos),str(math.degrees(sennkai_delta_ang)))
+
+            start_time = time.time()
+            
+            DrivePWM(ser, 0,0)
+##################################################################################################################################################################
+
+        elif val=='test_turn':  #kouzi
+            ser.write(bytes([140, 0, 4, 60,8, 62,8, 64,8, 66,8]))  # オドメトリモード起動音セット　　60と62はノート番号、32は持続時間 つまり，bytesを使えば簡単にシリアルデータを送信できるぞ
+            # ここで，140はモード，0は曲の番号（０番目の曲に音をセットする），音を出す数は２音，６０の音を32という時間だけ流す，６２という音を３２という時間だけ流す
+            play_song(ser, 0) #オドメトリ起動音再生
+            time.sleep(0.1)  # 2秒待つ
+
+            #初期角度と位置を設定
+            sennkai_delta_ang = 0 #初期の角度は2分のパイつまりxy平面でy軸方向を向いている
+            Roomba_xpos = 0
+            Roomba_ypos = 0
+
+
+            # まずは最初のエンコーダ値取得，そして開始時間も取得
+            # print("get encoder value...")
+            encL_prev, encR_prev = GetEncs(ser) # 左右のエンコーダの値取得
+            t_prev = time.time() # プログラムの実行開始時刻を取得 time.time()は，システムが起動してから何秒経ったかを取得してくれる関数　よってこれを引き算することで経過時間（秒）を得られる
+            print("その場旋回 最初enc値は:左が"+str(encL_prev)+"で，右が"+str(encL_prev)+"です．時間も取得しました 変数準備完了")
+
+
+            start_time = time.time()
+            while time.time() - start_time < 1:  # 現在の時刻と開始時刻の差が3秒未満の間 つまり3秒間ループ処理
+                #モータを動かす．（まずは直進させてみる）
+                # print("Go_Straight！！")
+                stop_flag = 0
+                DrivePWM(ser, -70,70)
+    
+                encL, encR = GetEncs(ser) # 左右のエンコーダの今の値再び取得
+                now_time = time.time() # 現在の時刻を取得
+
+                #微小区間の値を取得
+                delta_encL = encL_prev - encL
+                delta_encR = encR_prev - encR #エンコーダの値の差を取る
+                #(＃＃＃＃＃＃65535繰り上げ処理未実装＃＃＃＃＃＃＃＃＃＃＃＃)
+                # print("ΔencL:" + str(delta_encL))
+                # print("ΔencR:" + str(delta_encR))
+                delta_t = t_prev - now_time #経過時間（秒）を取得
+                # print("Δt:" + str(delta_t))
+
+                #計算
+                move_range_L = ((2*math.pi*TIRE_R)/508.8) * delta_encL
+                move_range_R = ((2*math.pi*TIRE_R)/508.8) * delta_encR #各タイヤの移動量を，エンコーダの値の差から算出
+
+                vL = move_range_L / delta_t
+                vR = move_range_R / delta_t
+                # print("L速度:" + str(vL))
+                # print("R速度:" + str(vR))
+
+                rotation_angle_L = ((2*math.pi)/508.8) * delta_encL
+                rotation_angle_R = ((2*math.pi)/508.8) * delta_encR #出たパルス分（delta_encL,R）の回転角度を計算
+                # print("角速度L:" + str(rotation_angle_L))
+                # print("角速度R:" + str(rotation_angle_R))
+
+                rotational_ang_vel_L = rotation_angle_L / delta_t #単位時間当たりの回転角度を計算すると，角速度が求められる 各タイヤの回転角速度
+                rotational_ang_vel_R = rotation_angle_R / delta_t #
+                Roomba_senkai_speed = (vL - vR)/TREAD #ルンバ自体の回転（旋回）速度を計算 方向は符号で判断可能＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
+                # print("旋回角速度ω：" + str(Roomba_senkai_speed))
+                # v_L, v_R 計算
+                L_vel = TIRE_R * rotational_ang_vel_L #角速度に半径をかけると，速度になる（v = rω）
+                R_vel = TIRE_R * rotational_ang_vel_R
+                Roomba_speed = (L_vel + R_vel)/2 # 並進速度(左右の速度の平均) つまりルンバ自体の速度となる＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
+                Roomba_senkai_speed = (L_vel - R_vel)/TREAD #ルンバ自体の回転（旋回）速度を計算 方向は符号で判断可能＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
+
+                #あとは，微笑時間ごとにルンバの速度と旋回から，進んだ方向と長さを計算して足していけばよい！（厳密な積分ではなく離散積分になるので，リーマン和という）
+                #まずはルンバの向きを算出し，微笑時間ごとの角度変化を累積していくことで現在のルンバの向き情報を取得する．
+                # ルンバの向きは，微小時間の旋回速度の旋回の和より， (距離＝速度×時間)を使って，方向の変化を求める．そして足していく
+                sennkai_delta_ang += Roomba_senkai_speed * delta_t #Δtを使った離散積分で（θ，x，y）を更新
+                # print("ルンバの角度："+str(math.degrees(sennkai_delta_ang))+"度  （x座標軸から）")
+                #ルンバ自体の速度の情報から移動距離を計算できるので，微笑時間ごとの移動距離を計算して足しこんでいく．そして向きの情報から，cosとsinを使って，x軸方向の移動距離とy軸方向の移動距離を計算して累積していくことで移動した座標が推定できる（尾止め鳥）
+                Roomba_xpos += Roomba_speed * math.cos(sennkai_delta_ang) * delta_t #ルンバの速度のx成分を微小時間ごとに足しこんて累積していくことでx座標の微小区間の移動距離を取得
+                Roomba_ypos += Roomba_speed * math.sin(sennkai_delta_ang) * delta_t #ルンバの速度のy成分を微小時間ごとに足しこんて累積していくことでx座標の微小区間の移動距離を取得
+
+                # print("ルンバのｘ座標：" + str(Roomba_xpos))
+                # print("ルンバのｙ座標：" + str(Roomba_ypos))
+
+
+                encL_prev = encL
+                encR_prev = encR
+                t_prev = now_time
+                print(str(-Roomba_xpos),str(-Roomba_ypos),str(math.degrees(sennkai_delta_ang)))
+
+            start_time = time.time()
+            
+            DrivePWM(ser, 0,0)
+##################################################################################################################################################################
+
+        elif val=='test_cur':  #kouzi
+            ser.write(bytes([140, 0, 4, 60,8, 62,8, 64,8, 66,8]))  # オドメトリモード起動音セット　　60と62はノート番号、32は持続時間 つまり，bytesを使えば簡単にシリアルデータを送信できるぞ
+            # ここで，140はモード，0は曲の番号（０番目の曲に音をセットする），音を出す数は２音，６０の音を32という時間だけ流す，６２という音を３２という時間だけ流す
+            play_song(ser, 0) #オドメトリ起動音再生
+            time.sleep(0.1)  # 2秒待つ
+
+            #初期角度と位置を設定
+            sennkai_delta_ang = 0 #初期の角度は2分のパイつまりxy平面でy軸方向を向いている
+            Roomba_xpos = 0
+            Roomba_ypos = 0
+
+
+            # まずは最初のエンコーダ値取得，そして開始時間も取得
+            # print("get encoder value...")
+            encL_prev, encR_prev = GetEncs(ser) # 左右のエンコーダの値取得
+            t_prev = time.time() # プログラムの実行開始時刻を取得 time.time()は，システムが起動してから何秒経ったかを取得してくれる関数　よってこれを引き算することで経過時間（秒）を得られる
+            print("カーブ 最初enc値は:左が"+str(encL_prev)+"で，右が"+str(encL_prev)+"です．時間取得 変数準備完了")
+
+
+            start_time = time.time()
+            while time.time() - start_time < 2:  # 現在の時刻と開始時刻の差が3秒未満の間 つまり3秒間ループ処理
+                #モータを動かす．（まずは直進させてみる）
+                # print("Go_Straight！！")
+                stop_flag = 0
+                DrivePWM(ser, 35,70)
+    
+                encL, encR = GetEncs(ser) # 左右のエンコーダの今の値再び取得
+                now_time = time.time() # 現在の時刻を取得
+
+                #微小区間の値を取得
+                delta_encL = encL_prev - encL
+                delta_encR = encR_prev - encR #エンコーダの値の差を取る
+                #(＃＃＃＃＃＃65535繰り上げ処理未実装＃＃＃＃＃＃＃＃＃＃＃＃)
+                # print("ΔencL:" + str(delta_encL))
+                # print("ΔencR:" + str(delta_encR))
+                delta_t = t_prev - now_time #経過時間（秒）を取得
+                # print("Δt:" + str(delta_t))
+
+                #計算
+                move_range_L = ((2*math.pi*TIRE_R)/508.8) * delta_encL
+                move_range_R = ((2*math.pi*TIRE_R)/508.8) * delta_encR #各タイヤの移動量を，エンコーダの値の差から算出
+
+                vL = move_range_L / delta_t
+                vR = move_range_R / delta_t
+                # print("L速度:" + str(vL))
+                # print("R速度:" + str(vR))
+
+                rotation_angle_L = ((2*math.pi)/508.8) * delta_encL
+                rotation_angle_R = ((2*math.pi)/508.8) * delta_encR #出たパルス分（delta_encL,R）の回転角度を計算
+                # print("角速度L:" + str(rotation_angle_L))
+                # print("角速度R:" + str(rotation_angle_R))
+
+                rotational_ang_vel_L = rotation_angle_L / delta_t #単位時間当たりの回転角度を計算すると，角速度が求められる 各タイヤの回転角速度
+                rotational_ang_vel_R = rotation_angle_R / delta_t #
+                Roomba_senkai_speed = (vL - vR)/TREAD #ルンバ自体の回転（旋回）速度を計算 方向は符号で判断可能＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
+                # print("旋回角速度ω：" + str(Roomba_senkai_speed))
+                # v_L, v_R 計算
+                L_vel = TIRE_R * rotational_ang_vel_L #角速度に半径をかけると，速度になる（v = rω）
+                R_vel = TIRE_R * rotational_ang_vel_R
+                Roomba_speed = (L_vel + R_vel)/2 # 並進速度(左右の速度の平均) つまりルンバ自体の速度となる＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
+                Roomba_senkai_speed = (L_vel - R_vel)/TREAD #ルンバ自体の回転（旋回）速度を計算 方向は符号で判断可能＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
+
+                #あとは，微笑時間ごとにルンバの速度と旋回から，進んだ方向と長さを計算して足していけばよい！（厳密な積分ではなく離散積分になるので，リーマン和という）
+                #まずはルンバの向きを算出し，微笑時間ごとの角度変化を累積していくことで現在のルンバの向き情報を取得する．
+                # ルンバの向きは，微小時間の旋回速度の旋回の和より， (距離＝速度×時間)を使って，方向の変化を求める．そして足していく
+                sennkai_delta_ang += Roomba_senkai_speed * delta_t #Δtを使った離散積分で（θ，x，y）を更新
+                # print("ルンバの角度："+str(math.degrees(sennkai_delta_ang))+"度  （x座標軸から）")
+                #ルンバ自体の速度の情報から移動距離を計算できるので，微笑時間ごとの移動距離を計算して足しこんでいく．そして向きの情報から，cosとsinを使って，x軸方向の移動距離とy軸方向の移動距離を計算して累積していくことで移動した座標が推定できる（尾止め鳥）
+                Roomba_xpos += Roomba_speed * math.cos(sennkai_delta_ang) * delta_t #ルンバの速度のx成分を微小時間ごとに足しこんて累積していくことでx座標の微小区間の移動距離を取得
+                Roomba_ypos += Roomba_speed * math.sin(sennkai_delta_ang) * delta_t #ルンバの速度のy成分を微小時間ごとに足しこんて累積していくことでx座標の微小区間の移動距離を取得
+
+                # print("ルンバのｘ座標：" + str(Roomba_xpos))
+                # print("ルンバのｙ座標：" + str(Roomba_ypos))
+
+
+                encL_prev = encL
+                encR_prev = encR
+                t_prev = now_time
+                print(str(-Roomba_xpos),str(-Roomba_ypos),str(math.degrees(sennkai_delta_ang))) #今のルンバのx座標，ｙ座標，角度であるので，あとはこの情報を使ってif文書けばいい！
+
+            start_time = time.time()
+            
+            DrivePWM(ser, 0,0)
+##################################################################################################################################################################
+#################################################################################################################################################################
+            #################################################################################################################################################################
+#                                                            ■                                                
+#      ■■                                                  ■■ ■                                               
+#      ■■                                   ■■         ■■  ■  ■             ■■     ■                 ■■       
+#      ■■                                  ■■          ■■   ■■             ■■      ■■                ■■       
+# ■■■■■■■■■■■■                           ■■■      ■■■■■■■■■■■■           ■■■        ■■■              ■■       
+# ■■        ■■                          ■■        ■■■■■■■■■■■■          ■■           ■■■             ■■       
+# ■■        ■■     ■■■■■■■■■■         ■■■■             ■■             ■■■■                   ■■      ■■■■     
+# ■■        ■          ■■          ■■■■ ■■             ■■          ■■■■ ■■                  ■■       ■■■■■■   
+# ■■       ■■          ■■         ■■■   ■■         ■■  ■■  ■■     ■■■   ■■                 ■■        ■■   ■■■ 
+#          ■■          ■■               ■■         ■   ■■   ■           ■■                ■■         ■■     ■ 
+#         ■■           ■■               ■■        ■■   ■■   ■■          ■■               ■■          ■■       
+#        ■■            ■■               ■■       ■■    ■■    ■          ■■             ■■■           ■■       
+#       ■■             ■■               ■■             ■■               ■■          ■■■■             ■■       
+#    ■■■■         ■■■■■■■■■■■■          ■■           ■■■■               ■■         ■■■               ■■       
+#                                       ■            ■■■                ■                                     
+            
+#                                                                       
+#                                                           
+#                                                           
+# ■■   ■■    ■              ■■■■■           ■               
+# ■■   ■■   ■■              ■    ■                      ■   
+#  ■   ■■   ■   ■■■  ■■   ■ ■    ■   ■■■■   ■   ■ ■■■  ■■■■ 
+#  ■   ■■■  ■  ■   ■  ■   ■ ■    ■  ■■  ■■  ■   ■■  ■■  ■   
+#  ■■ ■  ■ ■■      ■  ■  ■  ■■■■■   ■    ■  ■   ■    ■  ■   
+#   ■ ■  ■ ■   ■■■■■   ■ ■  ■       ■    ■  ■   ■    ■  ■   
+#   ■■■  ■■■   ■   ■   ■■■  ■       ■    ■  ■   ■    ■  ■   
+#   ■■    ■■   ■  ■■   ■■   ■       ■■  ■■  ■   ■    ■  ■■  
+#    ■    ■    ■■■■■    ■   ■        ■■■■   ■   ■    ■   ■■ 
+#                      ■                                    
+#                     ■■                                    
+#                                                           
+#                                                                                                             
+#################################################################################################################################################################
+################################################################################################################################################################
+#################################################################################################################################################################
+#################################################################################################################################################################
+
+
+        elif val=='wayp':  #kouzi
+            ser.write(bytes([140, 0, 4, 60,8, 62,8, 64,8, 66,8]))  # オドメトリモード起動音セット　　60と62はノート番号、32は持続時間 つまり，bytesを使えば簡単にシリアルデータを送信できるぞ
+            # ここで，140はモード，0は曲の番号（０番目の曲に音をセットする），音を出す数は２音，６０の音を32という時間だけ流す，６２という音を３２という時間だけ流す
+            play_song(ser, 0) #オドメトリ起動音再生
+            #######目標座標（ウェイポイント）設定
+            x_wp = 1000
+            y_wp = 2000
+            time.sleep(0.1)  # 2秒待つ
+
+            #初期角度と位置を設定
+            sennkai_delta_ang = 0 #初期の角度は2分のパイつまりxy平面でy軸方向を向いている
+            Roomba_xpos = 0
+            Roomba_ypos = 0
+            #目標位置，角度を設定
+
+
+            # まずは最初のエンコーダ値取得，そして開始時間も取得
+            # print("get encoder value...")
+            encL_prev, encR_prev = GetEncs(ser) # 左右のエンコーダの値取得
+            t_prev = time.time() # プログラムの実行開始時刻を取得 time.time()は，システムが起動してから何秒経ったかを取得してくれる関数　よってこれを引き算することで経過時間（秒）を得られる
+            print("カーブ 最初enc値は:左が"+str(encL_prev)+"で，右が"+str(encL_prev)+"です．時間取得 変数準備完了")
+
+
+            start_time = time.time()
+            while time.time() - start_time < 20:  # 現在の時刻と開始時刻の差が3秒未満の間 つまり3秒間ループ処理
+                #モータを動かす．（まずは直進させてみる）
+                # print("Go_Straight！！")
+                stop_flag = 0
+                # DrivePWM(ser, 35,70)
+
+                encL, encR = GetEncs(ser) # 左右のエンコーダの今の値再び取得
+                now_time = time.time() # 現在の時刻を取得
+
+                #微小区間の値を取得
+                delta_encL = encL_prev - encL
+                delta_encR = encR_prev - encR #エンコーダの値の差を取る
+                #(＃＃＃＃＃＃65535繰り上げ処理未実装＃＃＃＃＃＃＃＃＃＃＃＃)
+                # print("ΔencL:" + str(delta_encL))
+                # print("ΔencR:" + str(delta_encR))
+                delta_t = t_prev - now_time #経過時間（秒）を取得
+                # print("Δt:" + str(delta_t))
+
+                #計算
+                move_range_L = ((2*math.pi*TIRE_R)/508.8) * delta_encL
+                move_range_R = ((2*math.pi*TIRE_R)/508.8) * delta_encR #各タイヤの移動量を，エンコーダの値の差から算出
+
+                vL = move_range_L / delta_t
+                vR = move_range_R / delta_t
+                # print("L速度:" + str(vL))
+                # print("R速度:" + str(vR))
+
+                rotation_angle_L = ((2*math.pi)/508.8) * delta_encL
+                rotation_angle_R = ((2*math.pi)/508.8) * delta_encR #出たパルス分（delta_encL,R）の回転角度を計算
+                # print("角速度L:" + str(rotation_angle_L))
+                # print("角速度R:" + str(rotation_angle_R))
+
+                rotational_ang_vel_L = rotation_angle_L / delta_t #単位時間当たりの回転角度を計算すると，角速度が求められる 各タイヤの回転角速度
+                rotational_ang_vel_R = rotation_angle_R / delta_t #
+                Roomba_senkai_speed = (vL - vR)/TREAD #ルンバ自体の回転（旋回）速度を計算 方向は符号で判断可能＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
+                # print("旋回角速度ω：" + str(Roomba_senkai_speed))
+                # v_L, v_R 計算
+                L_vel = TIRE_R * rotational_ang_vel_L #角速度に半径をかけると，速度になる（v = rω）
+                R_vel = TIRE_R * rotational_ang_vel_R
+                Roomba_speed = (L_vel + R_vel)/2 # 並進速度(左右の速度の平均) つまりルンバ自体の速度となる＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
+                Roomba_senkai_speed = (L_vel - R_vel)/TREAD #ルンバ自体の回転（旋回）速度を計算 方向は符号で判断可能＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
+
+                #あとは，微笑時間ごとにルンバの速度と旋回から，進んだ方向と長さを計算して足していけばよい！（厳密な積分ではなく離散積分になるので，リーマン和という）
+                #まずはルンバの向きを算出し，微笑時間ごとの角度変化を累積していくことで現在のルンバの向き情報を取得する．
+                # ルンバの向きは，微小時間の旋回速度の旋回の和より， (距離＝速度×時間)を使って，方向の変化を求める．そして足していく
+                sennkai_delta_ang += Roomba_senkai_speed * delta_t #Δtを使った離散積分で（θ，x，y）を更新
+                # print("ルンバの角度："+str(math.degrees(sennkai_delta_ang))+"度  （x座標軸から）")
+                #ルンバ自体の速度の情報から移動距離を計算できるので，微笑時間ごとの移動距離を計算して足しこんでいく．そして向きの情報から，cosとsinを使って，x軸方向の移動距離とy軸方向の移動距離を計算して累積していくことで移動した座標が推定できる（尾止め鳥）
+                Roomba_xpos += Roomba_speed * math.cos(sennkai_delta_ang) * delta_t #ルンバの速度のx成分を微小時間ごとに足しこんて累積していくことでx座標の微小区間の移動距離を取得
+                Roomba_ypos += Roomba_speed * math.sin(sennkai_delta_ang) * delta_t #ルンバの速度のy成分を微小時間ごとに足しこんて累積していくことでx座標の微小区間の移動距離を取得
+
+                # print("ルンバのｘ座標：" + str(Roomba_xpos))
+                # print("ルンバのｙ座標：" + str(Roomba_ypos))
+
+
+                encL_prev = encL
+                encR_prev = encR
+                t_prev = now_time
+                now_ang = math.degrees(sennkai_delta_ang)
+                # print(str(-Roomba_xpos),str(-Roomba_ypos),str(now_ang)) #今のルンバのx座標，ｙ座標，角度であるので，あとはこの情報を使ってif文書けばいい！
+
+                
+                thita_wayp = math.atan2(y_wp - Roomba_ypos, x_wp - Roomba_xpos)
+                delta_thita_wayp = thita_wayp - now_ang #これで、目標座標への方角のずれがわかった
+                distance_wayp = math.sqrt((y_wp - Roomba_ypos)*(y_wp - Roomba_ypos)+(x_wp - Roomba_xpos)*(x_wp - Roomba_xpos))
+                print("方位のずれ：",delta_thita_wayp,"距離d：",distance_wayp)
+
+
+                if distance_wayp >=100: # 目標の位置の方位と今のルンバの向きの方位の差が５以上だったら　旋回して角度合わせる，
+                    DrivePWM(ser, int(0.05*distance_wayp-30*delta_thita_wayp) , int(0.05*distance_wayp+30*delta_thita_wayp)) #差の大きさの変数をそのまま出力にするのが一番よさそう（P制御）
+
+                    print(int(0.05*distance_wayp-30*delta_thita_wayp) , int(0.05*distance_wayp+30*delta_thita_wayp))
+
+            start_time = time.time()
+            
+            DrivePWM(ser, 0,0)
+##################################################################################################################################################################
+#                                                                                                      
+#    ■    ■           ■     ■                                                                          
+#    ■    ■         ■ ■ ■■  ■                                                                          
+#    ■   ■■■■■■■■   ■ ■ ■  ■■                                                                          
+#  ■■■■■ ■            ■    ■■■■■■                                                   ■■                 
+#     ■■■■■■■■■■   ■■■■■■■ ■   ■                                                    ■■             ■   
+#     ■ ■■■    ■     ■■■   ■  ■■                                                                   ■   
+#    ■■  ■■■■■■■    ■ ■■■■■■  ■■  ■■   ■■   ■■  ■■■■   ■■    ■■ ■■ ■■■      ■■■■        ■■ ■■■   ■■■■■ 
+#    ■ ■ ■■    ■   ■  ■   ■■  ■    ■   ■■   ■  ■■   ■   ■    ■  ■■■   ■    ■   ■■   ■■  ■■■  ■■    ■   
+#   ■■■■ ■■■■■■■      ■     ■ ■    ■   ■■■  ■       ■   ■■  ■■  ■■    ■■  ■■    ■■  ■■  ■■    ■    ■   
+#  ■■■■■   ■       ■■■■■■■■ ■■■    ■■ ■  ■ ■■    ■■■■■   ■  ■   ■■     ■  ■     ■■  ■■  ■■    ■    ■   
+#  ■ ■ ■■ ■■■■■■     ■  ■    ■      ■ ■  ■ ■   ■■   ■■   ■  ■   ■■     ■  ■     ■■  ■■  ■■    ■    ■   
+#    ■   ■■■  ■     ■■ ■■   ■■■     ■■■  ■■■   ■    ■■   ■■■■   ■■    ■■  ■■    ■■  ■■  ■■    ■    ■   
+#    ■  ■  ■■■       ■■■    ■ ■■    ■■    ■■   ■■  ■■■    ■■    ■■■   ■    ■   ■■   ■■  ■■    ■    ■   
+#    ■     ■■■■      ■■■■■■■   ■■    ■    ■     ■■■■■■    ■■    ■■ ■■■      ■■■■    ■■  ■■    ■    ■■■ 
+#    ■   ■■■  ■■■  ■■■    ■     ■                         ■     ■■                                     
+#    ■  ■                                                ■■     ■■                                     
+#                                                       ■■      ■■                                     
+#                                                                                                                    
+
+        elif val=='1wayp':  #kouzi
+            ser.write(bytes([140, 0, 4, 60,8, 62,8, 64,8, 66,8]))  # オドメトリモード起動音セット　　60と62はノート番号、32は持続時間 つまり，bytesを使えば簡単にシリアルデータを送信できるぞ
+            # ここで，140はモード，0は曲の番号（０番目の曲に音をセットする），音を出す数は２音，６０の音を32という時間だけ流す，６２という音を３２という時間だけ流す
+            play_song(ser, 0) #オドメトリ起動音再生
+            #######目標座標（ウェイポイント）設定
+            # x_wp = 1000
+            # y_wp = 1000
+            # waypoint = [[1000,0],[1000,1000],[0,1000],[0,0]]
+            print("waypoint追従開始")
+
+            time.sleep(0.1)  # 2秒待つ
+
+            #初期角度と位置を設定
+            sennkai_delta_ang = 0 #初期の角度は2分のパイつまりxy平面でy軸方向を向いている
+            Roomba_xpos = 0
+            Roomba_ypos = 0
+            I_sekisan = 0 #積分I制御用の積算変数
+            graph_odom_x = []
+            graph_odom_y = []
+            graph_odom_thita = []
+            graph_delta_thita_wayp = []
+            #目標位置，角度を設定
+
+
+            # まずは最初のエンコーダ値取得，そして開始時間も取得
+            # print("get encoder value...")
+            encL_prev, encR_prev = GetEncs(ser) # 左右のエンコーダの値取得
+            t_prev = time.time() # プログラムの実行開始時刻を取得 time.time()は，システムが起動してから何秒経ったかを取得してくれる関数　よってこれを引き算することで経過時間（秒）を得られる
+            print("カーブ 最初enc値は:左が"+str(encL_prev)+"で，右が"+str(encL_prev)+"です．時間取得 変数準備完了")
+
+
+            start_time = time.time()
+            waypoint = [[600,0]]
+            for wayp_xnum in range(len(waypoint)):
+                print("##############目標座標は：x=",(waypoint[wayp_xnum][0]),", y=",(waypoint[wayp_xnum][1]), "です######################")
+                I_sekisan = 0
+                print("waypoint=",len(waypoint))
+                print("wayp_xnum=", wayp_xnum)
+                # sennkai_delta_ang = 0 #初期の角度は2分のパイつまりxy平面でy軸方向を向いている
+                # Roomba_xpos = 0
+                # Roomba_ypos = 0
+                encL_prev, encR_prev = GetEncs(ser) # 左右のエンコーダの値取得
+                while time.time() - start_time < 200:  # 現在の時刻と開始時刻の差が3秒未満の間 つまり3秒間ループ処理
+                    #モータを動かす．（まずは直進させてみる）
+                    # print("Go_Straight！！")
+                    stop_flag = 0
+                    # DrivePWM(ser, 35,70)
+
+                    encL, encR = GetEncs(ser) # 左右のエンコーダの今の値再び取得
+                    now_time = time.time() # 現在の時刻を取得
+
+                    #微小区間の値を取得
+                    delta_encL = encL_prev - encL
+                    delta_encR = encR_prev - encR #エンコーダの値の差を取る
+                    #(＃＃＃＃＃＃65535繰り上げ処理＃＃＃＃＃＃＃＃＃＃＃＃)
+                    if delta_encL <= -2000:
+                        delta_encL = encL_prev-65535 - encL
+                        print("リセット!!!!!!!!!!!!!対応結果encL：",delta_encL)
+                    if delta_encR <= -2000:
+                        delta_encR = encR_prev-65535 - encR
+                        print("リセット!!!!!!!!!!!!!対応結果encR：",delta_encR)
+                    # print("ΔencL:" + str(delta_encL))
+                    # print("ΔencR:" + str(delta_encR))
+                    delta_t = t_prev - now_time #経過時間（秒）を取得
+                    # print("Δt:" + str(delta_t))
+
+                    #計算
+                    move_range_L = ((2*math.pi*TIRE_R)/508.8) * delta_encL
+                    move_range_R = ((2*math.pi*TIRE_R)/508.8) * delta_encR #各タイヤの移動量を，エンコーダの値の差から算出
+
+                    vL = move_range_L / delta_t
+                    vR = move_range_R / delta_t
+                    # print("L速度:" + str(vL))
+                    # print("R速度:" + str(vR))
+
+                    rotation_angle_L = ((2*math.pi)/508.8) * delta_encL
+                    rotation_angle_R = ((2*math.pi)/508.8) * delta_encR #出たパルス分（delta_encL,R）の回転角度を計算
+                    # print("角速度L:" + str(rotation_angle_L))
+                    # print("角速度R:" + str(rotation_angle_R))
+
+                    rotational_ang_vel_L = rotation_angle_L / delta_t #単位時間当たりの回転角度を計算すると，角速度が求められる 各タイヤの回転角速度
+                    rotational_ang_vel_R = rotation_angle_R / delta_t #
+                    Roomba_senkai_speed = (vL - vR)/TREAD #ルンバ自体の回転（旋回）速度を計算 方向は符号で判断可能＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
+                    # print("旋回角速度ω：" + str(Roomba_senkai_speed))
+                    # v_L, v_R 計算
+                    L_vel = TIRE_R * rotational_ang_vel_L #角速度に半径をかけると，速度になる（v = rω）
+                    R_vel = TIRE_R * rotational_ang_vel_R
+                    Roomba_speed = (L_vel + R_vel)/2 # 並進速度(左右の速度の平均) つまりルンバ自体の速度となる＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
+                    Roomba_senkai_speed = (L_vel - R_vel)/TREAD #ルンバ自体の回転（旋回）速度を計算 方向は符号で判断可能＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
+
+                    #あとは，微笑時間ごとにルンバの速度と旋回から，進んだ方向と長さを計算して足していけばよい！（厳密な積分ではなく離散積分になるので，リーマン和という）
+                    #まずはルンバの向きを算出し，微笑時間ごとの角度変化を累積していくことで現在のルンバの向き情報を取得する．
+                    # ルンバの向きは，微小時間の旋回速度の旋回の和より， (距離＝速度×時間)を使って，方向の変化を求める．そして足していく
+                    sennkai_delta_ang += Roomba_senkai_speed * delta_t #Δtを使った離散積分で（θ，x，y）を更新
+                    # print("ルンバの角度："+str(math.degrees(sennkai_delta_ang))+"度  （x座標軸から）")
+                    #ルンバ自体の速度の情報から移動距離を計算できるので，微笑時間ごとの移動距離を計算して足しこんでいく．そして向きの情報から，cosとsinを使って，x軸方向の移動距離とy軸方向の移動距離を計算して累積していくことで移動した座標が推定できる（尾止め鳥）
+                    Roomba_xpos += Roomba_speed * math.cos(sennkai_delta_ang) * delta_t #ルンバの速度のx成分を微小時間ごとに足しこんて累積していくことでx座標の微小区間の移動距離を取得
+                    Roomba_ypos += Roomba_speed * math.sin(sennkai_delta_ang) * delta_t #ルンバの速度のy成分を微小時間ごとに足しこんて累積していくことでx座標の微小区間の移動距離を取得
+
+                    # print("ルンバのｘ座標：" + str(Roomba_xpos))
+                    # print("ルンバのｙ座標：" + str(Roomba_ypos))
+
+
+                    encL_prev = encL
+                    encR_prev = encR
+                    t_prev = now_time
+                    now_ang = math.degrees(sennkai_delta_ang)
+                    print("x座標：",str(-Roomba_xpos),"y座標：",str(-Roomba_ypos),"現在角度：",math.degrees(sennkai_delta_ang)) #今のルンバのx座標，ｙ座標，角度であるので，あとはこの情報を使ってif文書けばいい！
+
+                    
+                    thita_wayp = math.atan2(waypoint[wayp_xnum][1] - Roomba_ypos, waypoint[wayp_xnum][0] - Roomba_xpos)
+                    delta_thita_wayp = thita_wayp - sennkai_delta_ang #これで、目標座標への方角のずれがわかった
+                    print("thita_wayp=",thita_wayp)
+                    I_sekisan += delta_thita_wayp
+                    distance_wayp = math.sqrt((waypoint[wayp_xnum][1] - -1*Roomba_ypos)*(waypoint[wayp_xnum][1] - -1*Roomba_ypos)+(waypoint[wayp_xnum][0] - -1*Roomba_xpos)*(waypoint[wayp_xnum][0] - -1*Roomba_xpos))
+                    print("ルンバから見た目標までの角度",math.degrees(delta_thita_wayp),"方位のずれ：",math.degrees(delta_thita_wayp),"距離d：",distance_wayp)
+                    graph_odom_x.append(Roomba_xpos)
+                    graph_odom_y.append(Roomba_ypos)
+                    graph_odom_thita.append(sennkai_delta_ang)
+                    graph_delta_thita_wayp.append(delta_thita_wayp)
+
+                    if distance_wayp >=15: # 目標の位置の方位と今のルンバの向きの方位の差が５以上だったら　旋回して角度合わせる，
+                        # DrivePWM(ser, int(0.15*distance_wayp-20*delta_thita_wayp) , int(0.15*distance_wayp+20*delta_thita_wayp)) #差の大きさの変数をそのまま出力にするのが一番よさそう（P制御）
+                        # print(int(0.15*distance_wayp-20*delta_thita_wayp+29) , int(0.15*distance_wayp+20*delta_thita_wayp+29))
+                        # DrivePWM(ser, int(0.5*distance_wayp+20-400*delta_thita_wayp) , int(0.5*distance_wayp+20+400*delta_thita_wayp)) #差の大きさの変数をそのまま出力にするのが一番よさそう（P制御）
+                        # print(int(0.5*distance_wayp+20-400*delta_thita_wayp) , int(0.5*distance_wayp+20+400*delta_thita_wayp))
+
+                        # 直進
+                        # DrivePWM(ser, int(0.15*distance_wayp)+29 , int(0.15*distance_wayp)+29) #差の大きさの変数をそのまま出力にするのが一番よさそう（P制御）
+                        # print(int(0.15*distance_wayp)+25 , int(0.15*distance_wayp)+25)
+                        # 回転のみ
+                        DrivePWM(ser, int(80-200*delta_thita_wayp-10*I_sekisan) , int(80+200*delta_thita_wayp+10*I_sekisan)) #差の大きさの変数をそのまま出力にするのが一番よさそう（P制御）
+                        print("PWM出力  左",int(80-200*delta_thita_wayp-10*I_sekisan) ,"右", int(80+200*delta_thita_wayp+10*I_sekisan))
+                        print("エンコーダ値： 左",encL,"右",encR)
+
+                    else:
+                        DrivePWM(ser, 0,0)
+                        I_sekisan = 0
+                        time.sleep(1)
+                        u = np.cos(graph_odom_thita)
+                        v = np.sin(graph_odom_thita)
+                        # 折れ線グラフを作成します
+                        plt.plot(graph_odom_x, graph_odom_y)
+                        # 30データごとに矢印を表示するためにデータを間引きます # 矢印の方向を反転もさせてます
+                        x_sampled = graph_odom_x[::30]
+                        y_sampled = graph_odom_y[::30]
+                        u_sampled = -u[::30]
+                        v_sampled = -v[::30]
+                        
+                        # 間引いたデータに対して矢印を追加
+                        plt.quiver(x_sampled, y_sampled, u_sampled, v_sampled, scale=5, color='red')
+
+
+                        # タイトルと軸ラベルを追加します
+                        plt.title("Sample Line Graph")
+                        plt.xlabel("X Axis")
+                        plt.ylabel("Y Axis")
+                        plt.grid(True)
+                        # グラフを表示します
+                        plt.show()
+                        ser.write(bytes([140, 0, 4, 60,8, 62,8, 64,8, 66,8]))  # オドメトリモード起動音セット　　60と62はノート番号、32は持続時間 つまり，bytesを使えば簡単にシリアルデータを送信できるぞ
+                        # ここで，140はモード，0は曲の番号（０番目の曲に音をセットする），音を出す数は２音，６０の音を32という時間だけ流す，６２という音を３２という時間だけ流す
+                        play_song(ser, 0) #オドメトリ起動音再生
+
+                        
+
+                        break
+            start_time = time.time()
+            
+            DrivePWM(ser, 0,0)
+
+        elif val=='2wayp':  #kouzi
+            ser.write(bytes([140, 0, 4, 60,8, 62,8, 64,8, 66,8]))  # オドメトリモード起動音セット　　60と62はノート番号、32は持続時間 つまり，bytesを使えば簡単にシリアルデータを送信できるぞ
+            # ここで，140はモード，0は曲の番号（０番目の曲に音をセットする），音を出す数は２音，６０の音を32という時間だけ流す，６２という音を３２という時間だけ流す
+            play_song(ser, 0) #オドメトリ起動音再生
+            #######目標座標（ウェイポイント）設定
+            # x_wp = 1000
+            # y_wp = 1000
+            # waypoint = [[1000,0],[1000,1000],[0,1000],[0,0]]
+            print("waypoint追従開始")
+
+            time.sleep(0.1)  # 2秒待つ
+
+            #初期角度と位置を設定
+            sennkai_delta_ang = 0 #初期の角度は2分のパイつまりxy平面でy軸方向を向いている
+            Roomba_xpos = 0
+            Roomba_ypos = 0
+            I_sekisan = 0 #積分I制御用の積算変数
+            graph_odom_x = []
+            graph_odom_y = []
+            graph_odom_thita = []
+            graph_delta_thita_wayp = []
+            #目標位置，角度を設定
+
+
+            # まずは最初のエンコーダ値取得，そして開始時間も取得
+            # print("get encoder value...")
+            encL_prev, encR_prev = GetEncs(ser) # 左右のエンコーダの値取得
+            t_prev = time.time() # プログラムの実行開始時刻を取得 time.time()は，システムが起動してから何秒経ったかを取得してくれる関数　よってこれを引き算することで経過時間（秒）を得られる
+            print("カーブ 最初enc値は:左が"+str(encL_prev)+"で，右が"+str(encL_prev)+"です．時間取得 変数準備完了")
+
+
+            start_time = time.time()
+            waypoint = [[600,0],[620,20]]
+            for wayp_xnum in range(len(waypoint)):
+                print("##############目標座標は：x=",(waypoint[wayp_xnum][0]),", y=",(waypoint[wayp_xnum][1]), "です######################")
+                I_sekisan = 0
+                print("waypoint=",len(waypoint))
+                print("wayp_xnum=", wayp_xnum)
+                # sennkai_delta_ang = 0 #初期の角度は2分のパイつまりxy平面でy軸方向を向いている
+                # Roomba_xpos = 0
+                # Roomba_ypos = 0
+                encL_prev, encR_prev = GetEncs(ser) # 左右のエンコーダの値取得
+                while time.time() - start_time < 1000:  # 現在の時刻と開始時刻の差が3秒未満の間 つまり3秒間ループ処理
+                    #モータを動かす．（まずは直進させてみる）
+                    # print("Go_Straight！！")
+                    stop_flag = 0
+                    # DrivePWM(ser, 35,70)
+
+                    encL, encR = GetEncs(ser) # 左右のエンコーダの今の値再び取得
+                    now_time = time.time() # 現在の時刻を取得
+
+                    #微小区間の値を取得
+                    delta_encL = encL_prev - encL
+                    delta_encR = encR_prev - encR #エンコーダの値の差を取る
+                    #(＃＃＃＃＃＃65535繰り上げ処理＃＃＃＃＃＃＃＃＃＃＃＃)
+                    if delta_encL <= -2000:
+                        delta_encL = encL_prev-65535 - encL
+                        print("リセット!!!!!!!!!!!!!対応結果encL：",delta_encL)
+                    if delta_encR <= -2000:
+                        delta_encR = encR_prev-65535 - encR
+                        print("リセット!!!!!!!!!!!!!対応結果encR：",delta_encR)
+                    # print("ΔencL:" + str(delta_encL))
+                    # print("ΔencR:" + str(delta_encR))
+                    delta_t = t_prev - now_time #経過時間（秒）を取得
+                    # print("Δt:" + str(delta_t))
+
+                    #計算
+                    move_range_L = ((2*math.pi*TIRE_R)/508.8) * delta_encL
+                    move_range_R = ((2*math.pi*TIRE_R)/508.8) * delta_encR #各タイヤの移動量を，エンコーダの値の差から算出
+
+                    vL = move_range_L / delta_t
+                    vR = move_range_R / delta_t
+                    # print("L速度:" + str(vL))
+                    # print("R速度:" + str(vR))
+
+                    rotation_angle_L = ((2*math.pi)/508.8) * delta_encL
+                    rotation_angle_R = ((2*math.pi)/508.8) * delta_encR #出たパルス分（delta_encL,R）の回転角度を計算
+                    # print("角速度L:" + str(rotation_angle_L))
+                    # print("角速度R:" + str(rotation_angle_R))
+
+                    rotational_ang_vel_L = rotation_angle_L / delta_t #単位時間当たりの回転角度を計算すると，角速度が求められる 各タイヤの回転角速度
+                    rotational_ang_vel_R = rotation_angle_R / delta_t #
+                    Roomba_senkai_speed = (vL - vR)/TREAD #ルンバ自体の回転（旋回）速度を計算 方向は符号で判断可能＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
+                    # print("旋回角速度ω：" + str(Roomba_senkai_speed))
+                    # v_L, v_R 計算
+                    L_vel = TIRE_R * rotational_ang_vel_L #角速度に半径をかけると，速度になる（v = rω）
+                    R_vel = TIRE_R * rotational_ang_vel_R
+                    Roomba_speed = (L_vel + R_vel)/2 # 並進速度(左右の速度の平均) つまりルンバ自体の速度となる＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
+                    Roomba_senkai_speed = (L_vel - R_vel)/TREAD #ルンバ自体の回転（旋回）速度を計算 方向は符号で判断可能＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
+
+                    #あとは，微笑時間ごとにルンバの速度と旋回から，進んだ方向と長さを計算して足していけばよい！（厳密な積分ではなく離散積分になるので，リーマン和という）
+                    #まずはルンバの向きを算出し，微笑時間ごとの角度変化を累積していくことで現在のルンバの向き情報を取得する．
+                    # ルンバの向きは，微小時間の旋回速度の旋回の和より， (距離＝速度×時間)を使って，方向の変化を求める．そして足していく
+                    sennkai_delta_ang += Roomba_senkai_speed * delta_t #Δtを使った離散積分で（θ，x，y）を更新
+                    # print("ルンバの角度："+str(math.degrees(sennkai_delta_ang))+"度  （x座標軸から）")
+                    #ルンバ自体の速度の情報から移動距離を計算できるので，微笑時間ごとの移動距離を計算して足しこんでいく．そして向きの情報から，cosとsinを使って，x軸方向の移動距離とy軸方向の移動距離を計算して累積していくことで移動した座標が推定できる（尾止め鳥）
+                    Roomba_xpos += Roomba_speed * math.cos(sennkai_delta_ang) * delta_t #ルンバの速度のx成分を微小時間ごとに足しこんて累積していくことでx座標の微小区間の移動距離を取得
+                    Roomba_ypos += Roomba_speed * math.sin(sennkai_delta_ang) * delta_t #ルンバの速度のy成分を微小時間ごとに足しこんて累積していくことでx座標の微小区間の移動距離を取得
+
+                    # print("ルンバのｘ座標：" + str(Roomba_xpos))
+                    # print("ルンバのｙ座標：" + str(Roomba_ypos))
+
+
+                    encL_prev = encL
+                    encR_prev = encR
+                    t_prev = now_time
+                    now_ang = math.degrees(sennkai_delta_ang)
+                    print("x座標：",str(-Roomba_xpos),"y座標：",str(-Roomba_ypos),"現在角度：",math.degrees(sennkai_delta_ang)) #今のルンバのx座標，ｙ座標，角度であるので，あとはこの情報を使ってif文書けばいい！
+
+                    
+                    thita_wayp = math.atan2(waypoint[wayp_xnum][1] - Roomba_ypos, waypoint[wayp_xnum][0] - Roomba_xpos)
+                    delta_thita_wayp = thita_wayp - sennkai_delta_ang #これで、目標座標への方角のずれがわかった
+                    print("thita_wayp=",thita_wayp)
+                    print(wayp_xnum)
+                    print(sennkai_delta_ang)
+                    print(delta_thita_wayp)
+                    #I_sekisan += delta_thita_wayp
+                    distance_wayp = math.sqrt((waypoint[wayp_xnum][1] - -1*Roomba_ypos)*(waypoint[wayp_xnum][1] - -1*Roomba_ypos)+(waypoint[wayp_xnum][0] - -1*Roomba_xpos)*(waypoint[wayp_xnum][0] - -1*Roomba_xpos))
+                    print("ルンバから見た目標までの角度",math.degrees(delta_thita_wayp),"方位のずれ：",math.degrees(delta_thita_wayp),"距離d：",distance_wayp)
+                    graph_odom_x.append(Roomba_xpos)
+                    graph_odom_y.append(Roomba_ypos)
+                    graph_odom_thita.append(sennkai_delta_ang)
+                    graph_delta_thita_wayp.append(delta_thita_wayp)
+
+                    if distance_wayp >=15: # 目標の位置の方位と今のルンバの向きの方位の差が５以上だったら　旋回して角度合わせる，
+                        # DrivePWM(ser, int(0.15*distance_wayp-20*delta_thita_wayp) , int(0.15*distance_wayp+20*delta_thita_wayp)) #差の大きさの変数をそのまま出力にするのが一番よさそう（P制御）
+                        # print(int(0.15*distance_wayp-20*delta_thita_wayp+29) , int(0.15*distance_wayp+20*delta_thita_wayp+29))
+                        # DrivePWM(ser, int(0.5*distance_wayp+20-400*delta_thita_wayp) , int(0.5*distance_wayp+20+400*delta_thita_wayp)) #差の大きさの変数をそのまま出力にするのが一番よさそう（P制御）
+                        # print(int(0.5*distance_wayp+20-400*delta_thita_wayp) , int(0.5*distance_wayp+20+400*delta_thita_wayp))
+
+                        # 直進
+                        # DrivePWM(ser, int(0.15*distance_wayp)+29 , int(0.15*distance_wayp)+29) #差の大きさの変数をそのまま出力にするのが一番よさそう（P制御）
+                        # print(int(0.15*distance_wayp)+25 , int(0.15*distance_wayp)+25)
+                        # 回転のみ
+                        DrivePWM(ser, int(1.7*distance_wayp-0.8*delta_thita_wayp) , int(1.7*distance_wayp+0.8*delta_thita_wayp)) #差の大きさの変数をそのまま出力にするのが一番よさそう（P制御）
+                        print("PWM出力  左",int(1.7*distance_wayp-0.8*delta_thita_wayp) ,"右", int(1.7*distance_wayp+0.8*delta_thita_wayp))
+                        print("エンコーダ値： 左",encL,"右",encR)
+
+                    else:
+                        DrivePWM(ser, 0,0)
+                        I_sekisan = 0
+                        time.sleep(1)
+                        u = np.cos(graph_odom_thita)
+                        v = np.sin(graph_odom_thita)
+                        # 折れ線グラフを作成します
+                        plt.plot(graph_odom_x, graph_odom_y)
+                        # 30データごとに矢印を表示するためにデータを間引きます # 矢印の方向を反転もさせてます
+                        x_sampled = graph_odom_x[::30]
+                        y_sampled = graph_odom_y[::30]
+                        u_sampled = -u[::30]
+                        v_sampled = -v[::30]
+                        
+                        # 間引いたデータに対して矢印を追加
+                        plt.quiver(x_sampled, y_sampled, u_sampled, v_sampled, scale=5, color='red')
+
+
+                        # タイトルと軸ラベルを追加します
+                        plt.title("Sample Line Graph")
+                        plt.xlabel("X Axis")
+                        plt.ylabel("Y Axis")
+                        plt.grid(True)
+                        # グラフを表示します
+                        plt.show()
+                        ser.write(bytes([140, 0, 4, 60,8, 62,8, 64,8, 66,8]))  # オドメトリモード起動音セット　　60と62はノート番号、32は持続時間 つまり，bytesを使えば簡単にシリアルデータを送信できるぞ
+                        # ここで，140はモード，0は曲の番号（０番目の曲に音をセットする），音を出す数は２音，６０の音を32という時間だけ流す，６２という音を３２という時間だけ流す
+                        play_song(ser, 0) #オドメトリ起動音再生
+
+                        break
+            start_time = time.time()
+            
+            DrivePWM(ser, 0,0)
+###########################################################################
+
+
+        start_time = time.time()
+        
+        DrivePWM(ser, 0,0)
+##################################################################################################################################################################
 
 
 
@@ -742,8 +1423,8 @@ def main():
             # # 画像ファイルに保存する
             # plt.savefig('output.png')
 #＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃＃
-        else:
-            print("Input val="+val)
+        # else:
+        #     print("Input val="+val)
             
 
 main()
