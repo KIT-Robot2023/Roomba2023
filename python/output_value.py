@@ -85,6 +85,7 @@ def EncVelCalculation(enc, t):
     # 角速度計算
     w_L = (Angle_L - Angle_L_before) / delta_t
     w_R = (Angle_R - Angle_R_before) / delta_t
+    print(w_L, w_R)
     # 速度計算
     v_L = r * w_L
     v_R = r * w_R
@@ -145,7 +146,7 @@ def main():
     
     data_dict = {}
     before_t = 0.0  # 1時刻前の時間
-    T = 0.235  # 車輪間隔
+    T = 0.235  # 車輪間隔[m]
     # START
     print("START")
     stop_flag = 1
@@ -170,9 +171,9 @@ def main():
     angle_init = 0.0
     # 比例制御ゲイン
     k1 = 100
-    k2 = 0.0
+    k2 = 0.001
     # ウェイポイントの指定
-    wp = [0.3, 0.0]
+    wp = [0.5, 0.0]
     try:
         while True:
             time.sleep(0.05)
@@ -210,27 +211,36 @@ def main():
             print(f"x, y, Angle: {x}, {y}, {math.degrees(angle)}\n")
             before_t = now_time
 
-            # 値格納
-            data_dict[now_time] = [x, y, math.degrees(angle)]
+            
 
             # ウェイポイント計算
-            robot_x = -x*10
+            robot_x = x
             robot_y = y
             angle_wp = math.degrees(math.atan2(wp[1]-robot_y, wp[0]-robot_x))
             dist_wp = math.sqrt((wp[1]-robot_y)**2 + (wp[0]-robot_x)**2)
 
+            # 値格納
+            data_dict[now_time] = [x, y, math.degrees(angle), wp]
+
             # 足回り制御
             print(f"diff >>> x:{wp[0]-robot_x}, y: {wp[1]-robot_y}")
-            if not wp[0]-robot_x <= 0.1 and wp[1]-robot_y <= 0.1:
+            if not wp[0]-robot_x <= 0.2 or wp[1]-robot_y <= 0.2:
                 # 制御量計算
                 left_vel = k1*dist_wp - k2*angle_wp
                 right_vel = k1*dist_wp + k2*angle_wp
                 # PWM
+                
+                #if left_vel/right_vel <= 1.05 and left_vel/right_vel >= 0.95:
+                #    tmp = enc_vel_list[0]/enc_vel_list[1]
+                #    print(tmp)
+                #    right_vel *= tmp/2
                 DrivePWM(ser, int(left_vel), int(right_vel))
+            else:
+                DrivePWM(ser, 0, 0)
 
     except KeyboardInterrupt:
         # 値保存
-        with open('angle_data.txt', 'w') as f:
+        with open('wp_data.txt', 'w') as f:
             f.write(json.dumps(data_dict))
 
 
