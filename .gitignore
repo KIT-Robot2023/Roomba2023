@@ -1,3 +1,8 @@
+rep/mid_rep/out/
+rep/pre_mid_rep/out/
+python/settings.json
+python/img
+python/logs
 # ======================================= Global ignore =======================================
 .vscode/*
 

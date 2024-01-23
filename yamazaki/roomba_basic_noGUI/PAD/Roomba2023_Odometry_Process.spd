@@ -1,0 +1,42 @@
+:terminal START
+
+#各種宣言
+r = ~~@
+T = ~~
+
+:while 1
+	#センサ情報と微小時間の取得
+	get_sensors()@
+	L_pulse = rss->EncL@
+	R_pulse = rss->EncR@
+	dt = rss->TimeNow
+
+	# 回転角の計算
+	L_theta = 2pi*L_pulse/508.8@
+	R_theta = 2pi*R_pulse/508.8
+
+	#角速度及び速度計算
+	L_omega = (L_theta-L_theta_pre)/dt@
+	R_omega = (R_theta-R_theta_pre)/dt@
+	L_V = r*L_omega@
+	L_R = r*R_omega
+
+	# 並進速度＆旋回角速度
+	V = 0.5*(L_V*R_V)@
+	omega = 1/T*(R_V-L_V)
+
+	#位置情報の取得
+	theta = omega_pre*dt +theta_pre@
+	x_pos = V_pre*cos(theta_pre)*dt+x_pos_pre@
+	y_pos = V_pre*sin(theta_pre)*dt+y_pos_pre
+
+	#情報の更新
+	V_pre = V@
+	omega_pre = omega@
+	L_theta_pre = L_theta@
+	R_theta_pre = R_theta@
+	theta_pre = theta@
+	x_pos_pre = x_pos@
+	y_pos_pre = y_pos
+
+:terminal END
