@@ -27,28 +27,27 @@ odo_ax = nexttile;
 hold on;
 odo_line = plot(odo_ax, x(1),y(1), '--ob');
 target_line = plot(odo_ax,target_x(1), target_y(1), 'or');
-% legend('odometry','target point');
-% odo_ax.XLim = [-1 5];
-% odo_ax.YLim = [-3 3];
+odo_ax.XLim = [min(target_x)*1.1 max(target_x)*1.1];
+odo_ax.YLim = [min(target_y)*1.1 max(target_y)*1.1];
 
 theta_ax = nexttile;
 hold on;
 theta_line = plot(theta_ax, time(1), theta(1), '--ob');
-% theta_ax.XLim = [min(time), max(time)];
-% theta_ax.YLim = [min(theta), max(theta)];
+theta_ax.XLim = [min(time)*1.1, max(time)*1.1];
+theta_ax.YLim = [min(theta)*1.1, max(theta)*1.1];
 
 v_ax = nexttile;
 hold on;
 v_line =  plot(v_ax,time(1),v(1),'--ob');
-% v_ax.XLim = [min(time), max(time)];
-% v_ax.YLim = [min(v), max(v)];
+v_ax.XLim = [min(time)*1.1, max(time)*1.1];
+v_ax.YLim = [min(v)*1.1, max(v)*1.1];
 
 
 omega_ax = nexttile;
 hold on;
 omega_line = plot(omega_ax,time(1),omega(1),'--ob');
-% omega_ax.XLim = [min(time), max(time)];
-% omega_ax.YLim = [min(omega), max(omega)];
+omega_ax.XLim = [min(time)*1.1, max(time)*1.1];
+omega_ax.YLim = [min(omega)*1.1, max(omega)*1.1];
 
 
 for i = 2:length(time)
@@ -60,8 +59,6 @@ for i = 2:length(time)
     plot(odo_ax,[x(i-1) x(i)],[y(i-1) y(i)],'-b');
     odo_line.XData = x(i);
     odo_line.YData = y(i);
-    % target_line.XData = target_x(i);
-    % target_line.YData = target_y(i);
     plot(odo_ax, target_x(i),target_y(i),'*r');
 
     plot(theta_ax,[time(i-1) time(i)],[theta(i-1) theta(i)],'-b');
@@ -76,7 +73,7 @@ for i = 2:length(time)
     omega_line.XData = time(i);
     omega_line.YData = omega(i);
 
-    drawnow limitrate;
+    drawnow;
     tmp_time = toc;
     pause(dt - tmp_time);
 end
