@@ -2,13 +2,11 @@
 # coding: utf-8
 
 import socket
-import queue
 import pyrealsense2 as rs
 import numpy as np
 import cv2
 from ultralytics import YOLO
 # from ultralytics.solutions import heatmap
-import queue
 import math
 import time
 import os
@@ -31,7 +29,7 @@ shared_val = []
 key_2 = 0
 
 #YOLOのモデルをロード
-model = YOLO('best.pt')#400 8x 90deg
+model = YOLO('models/best.pt')#400 8x 90deg
 
 
 #YOLOを使った物体検出

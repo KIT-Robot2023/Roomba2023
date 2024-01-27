@@ -2,86 +2,13 @@
 # coding: utf-8
 
 import numpy as np
-import math
 import time
 import serial
 import keyboard
-import Q_ctrl
-import os
-import shutil
-import object_detection_webcam3
-
 import socket
-import threading
-import queue
 import time
 
-
-
-class Receiver(threading.Thread):
-    def __init__(self, address, timeout=0.5, buf_size=256, max_receive_size=1024):
-        super().__init__()
-        self.daemon = True
-        self.__sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Socketの生成(UDP)
-        self.__sock.settimeout(timeout)                 # Socketのタイムアウトの設定. この値を設定しないとrecvfromで永遠に受信待ちすることになる.
-        self.__sock.bind(address)                       # 受信アドレスの設定
-        self.__rev_buf = queue.Queue(buf_size)          # 受信データのバッファ(キュー)
-        self.data_list = []
-        self.__max_receive_size = max_receive_size
-        self.__is_receive = False
-        self.start()    # スレッドの開始(UDP受信の処理はスレッドで行われる)
-
-    def __del__(self):
-        self.__sock.close()
-
-    def startReceiving(self):
-        """受信を開始する"""
-        self.__is_receive = True
-
-    def stopReceiving(self):
-        """受信を停止する"""
-        self.__is_receive = False
-
-    def run(self):
-        while True:
-            if self.__is_receive == True:
-                try:
-                    data, address = self.__sock.recvfrom(self.__max_receive_size)   # 受信(タイムアウトで例外(socket.timeout)が送出される)
-                    # msg = data.decode(encoding="utf-8")
-                    # self.__rev_buf.put(msg, False)      # 受信データをバッファ(キュー)に追加する
-                    received_list = data.decode("utf-8").split(",")
-                    float_received_list = [float(item) for item in received_list]
-                    # self.__rev_buf.put(received_list, False)
-                    self.data_list.insert(0, float_received_list)
-                    self.data_list.pop(-1)
-                    # try:
-                    #     self.__rev_buf.put(received_list, False)
-                    # except queue.Full:
-                    #     # キューが満杯の場合、先頭のデータを削除してから追加
-                    #     self.__rev_buf.get_nowait()
-                    #     self.__rev_buf.put(received_list, False)
-
-                except socket.timeout:
-                    pass
-            else:
-                time.sleep(0.01)
-
-    def read(self):
-        """
-        データバッファ(キュー)からデータを1つ取り出す\n
-        バッファが空の場合は例外(queue.Empty)が送出される
-        """
-        return self.__rev_buf.get(block=False)
-
-    def empty(self):
-        """
-        受信データのバッファ(キュー)が空かの判定\n
-        空の場合: True, 空でない場合: False
-        """
-        return self.__rev_buf.empty()
-
-
-
+import action_decision
 
 #########################################################
 RB_PORT = "COM7"#シリアルポート設定
@@ -149,11 +76,8 @@ def main():
     RB_FULL  = bytes([132])
     RB_SEEK_DOCK  = bytes([143]) #//ドックを探す
     RB_RATE = 115200
-    agent = Q_ctrl.Action_decide()
+    agent = action_decision.Action_decide()
 
-    # receive_address = ("127.0.0.1",3000)    # 受信アドレス
-    # receiver = Receiver(receive_address)
-    # receiver.startReceiving()               # 受信開始
     receive_address = "127.0.0.1"
     receive_port = 3000
 
@@ -167,6 +91,8 @@ def main():
     ser.write(RB_SAFE)#セーフ
     velocity = 200
     key = 1
+
+    '''ゴリ押しコーディング．もっとかしこい書き方したい'''
     while True:
         udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         udp_socket.bind((receive_address, receive_port))
@@ -224,8 +150,6 @@ def main():
             time.sleep(0.5)
         # DriveVelocity(ser,0,0)
 
-        # if keyboard.is_pressed('q'):
-            # break
         except KeyboardInterrupt:
 
             print("--- Roomba_Q_ctrl_stop ---")
@@ -234,8 +158,3 @@ def main():
 if __name__ == "__main__":
     print("--- Roomba_Q_ctrl_start ---")
     main()
-# object_detection_webcam2_1.images_2_video('./Roomba_move_img','./movies')
-
-# target_dir = 'Roomba_move_img'
-# shutil.rmtree(target_dir)
-# os.mkdir(target_dir)

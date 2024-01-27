@@ -1,7 +1,7 @@
 from collections import defaultdict
 import numpy as np
 
-LODING_QTABLE = 'q_table_cal1_test2_4_2.npz'
+LODING_QTABLE = 'q_tables/q_table_cal1_test2_4_2.npz'
 
 class Q_Inference:
     def __init__(self):
