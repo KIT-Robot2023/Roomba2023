@@ -22,6 +22,9 @@ Roombaのシミュレータと，シミュレータを用いてQ学習を行わ�
 ### Roomba_DQN.ipynb
 当初，DQNを使ってRoombaを学習させようとした名残．
 
+### yolo_train.ipynb
+YOLOv8を転移学習させるためのNotebook.
+
 ### object_detection_webcam3.py
 yolo-V8の学習済みのモデルを用いて，ボールを検出し，ボールとの相対角度と相対距離をUDP通信で送信する．
 
