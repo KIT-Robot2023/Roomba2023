@@ -33,3 +33,7 @@ yolo-V8の学習済みのモデルを用いて，ボールを検出し，ボー�
 
 ### action_decision.py
 Qテーブルを読み込み，`Roomba_Q_ctrl.py`を介して得たRoombaの状態より，Qテーブルから適切な行動を返す．
+
+# 推論の様子
+推論の様子は以下のBOXリンクから確認することができる．(金沢工業大学の関係者のみアクセス可)
+https://kanazawa-it.box.com/s/8f1i10hyjkhjb96v92a0p4wrcchsh7dz
